@@ -1,0 +1,7 @@
+public/audio/Corry_Gang_Omi_papa.mp3
+public/audio/Kenzo_Wouro_O_Dimma.mp3
+public/audio/KENZO_WOURO_XONNAAXU.mp3
+public/audio/MISTER_GANG_HIP_HOP.mp3
+public/audio/MISTER_GANG_LA_GUERE.mp3
+public/audio/Niguer_Sia_Nouakchott.mp3
+public/audio/SIMOW_FA_LENME_RAP.mp3

@@ -1,0 +1,9 @@
+name = "sonimusic-api"
+main = "src/worker-native.js"
+account_id = "c4773a6a27e6723f2ee117e6569b65c9"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[[kv_namespaces]]
+binding = "TOKENS"
+id = "82e8ef19d33f47578e42b606168e06ad"
