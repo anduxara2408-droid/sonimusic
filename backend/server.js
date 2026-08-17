@@ -2,7 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+
+// Importer Prisma Client correctement (CommonJS)
+import pkg from '@prisma/client';
+const { PrismaClient } = pkg;
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -49,7 +52,6 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, name, password, role, artistName, bio, country } = req.body;
 
-    // Vérifier si l'utilisateur existe déjà
     const existingUser = await prisma.user.findUnique({
       where: { email }
     });
@@ -58,10 +60,8 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Cet email est déjà utilisé' });
     }
 
-    // Hacher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Créer l'utilisateur
     const user = await prisma.user.create({
       data: {
         email,
@@ -95,9 +95,8 @@ app.post('/api/auth/register', async (req, res) => {
 // Connexion
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { email, password } = await req.body;
+    const { email, password } = req.body;
 
-    // Vérifier si l'utilisateur existe
     const user = await prisma.user.findUnique({
       where: { email }
     });
@@ -106,13 +105,11 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
-    // Vérifier le mot de passe
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
-    // Générer un token JWT
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789',
