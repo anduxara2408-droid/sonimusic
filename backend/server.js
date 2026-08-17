@@ -2,15 +2,24 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
-// Importer Prisma Client correctement (CommonJS)
-import pkg from '@prisma/client';
-const { PrismaClient } = pkg;
+import { PrismaClient } from '@prisma/client/edge';
+import { withAccelerate } from '@prisma/extension-accelerate';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const prisma = new PrismaClient();
 
+// Configurer l'adaptateur PostgreSQL
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL,
+});
+
+// Initialiser Prisma Client avec l'adaptateur et Accelerate
+const prisma = new PrismaClient({
+  adapter,
+}).$extends(withAccelerate());
+
+// Middleware
 app.use(cors({
   origin: ['https://sonimusic.online', 'http://localhost:5173', 'https://sonimusic-1.onrender.com'],
   credentials: true
@@ -96,17 +105,20 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('🔐 Tentative de connexion:', email);
 
     const user = await prisma.user.findUnique({
       where: { email }
     });
 
     if (!user) {
+      console.log('❌ Utilisateur non trouvé:', email);
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
+      console.log('❌ Mot de passe incorrect pour:', email);
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
@@ -116,9 +128,10 @@ app.post('/api/auth/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
+    console.log('✅ Connexion réussie:', email);
+
     res.json({
       success: true,
-      message: 'Connexion réussie',
       token,
       user: {
         id: user.id,
@@ -129,7 +142,7 @@ app.post('/api/auth/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erreur connexion:', error);
+    console.error('❌ Erreur connexion:', error);
     res.status(500).json({ error: 'Erreur lors de la connexion' });
   }
 });
@@ -189,4 +202,5 @@ app.post('/api/auth/reset-password', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Health check: /api/health`);
+  console.log(`🔐 Login: /api/auth/login`);
 });
