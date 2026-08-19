@@ -17,7 +17,7 @@ const PlaylistModal = ({ isOpen, onClose, songId, onAdded }) => {
 
   const fetchPlaylists = async () => {
     try {
-      const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/playlists', {
+      const response = await axios.get('https://sonimusic-1.onrender.com/api/playlists', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setPlaylists(response.data || []);
@@ -35,7 +35,7 @@ const PlaylistModal = ({ isOpen, onClose, songId, onAdded }) => {
     }
 
     try {
-      const response = await axios.post('https://sonimusic-api.anduxara2408.workers.dev/api/playlists',
+      const response = await axios.post('https://sonimusic-1.onrender.com/api/playlists',
         { name: newPlaylistName, isPublic: true },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
@@ -50,7 +50,7 @@ const PlaylistModal = ({ isOpen, onClose, songId, onAdded }) => {
 
   const addToPlaylist = async (playlistId) => {
     try {
-      await axios.post(`https://sonimusic-api.anduxara2408.workers.dev/api/playlists/${playlistId}/add-song`,
+      await axios.post(`https://sonimusic-1.onrender.com/api/playlists/${playlistId}/add-song`,
         { songId: parseInt(songId) },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );

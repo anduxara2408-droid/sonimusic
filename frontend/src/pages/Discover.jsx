@@ -184,7 +184,7 @@ function Discover() {
       setLoading(false);
       // TODO: Réactiver quand le backend sera déployé
       // const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      // const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/songs', { headers });
+      // const response = await axios.get('https://sonimusic-1.onrender.com/api/songs', { headers });
       // setSongs(response.data);
       // setLoading(false);
     } catch (error) {
@@ -195,7 +195,7 @@ function Discover() {
 
   const fetchFavorites = async () => {
     try {
-      const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/favorites/my-favorites', {
+      const response = await axios.get('https://sonimusic-1.onrender.com/api/favorites/my-favorites', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setFavorites(response.data.map(f => f.songId));
@@ -234,7 +234,7 @@ function Discover() {
     }
     try {
       const response = await axios.post(
-        `https://sonimusic-api.anduxara2408.workers.dev/api/favorites/songs/${songId}/toggle`,
+        `https://sonimusic-1.onrender.com/api/favorites/songs/${songId}/toggle`,
         {},
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
@@ -383,7 +383,7 @@ function Discover() {
               <div key={song.id} className="bg-gray-900/50 rounded-xl p-3 hover:bg-gray-800 transition-all cursor-pointer group">
                 <div className="relative">
                   <img 
-                    src={song.coverArt ? `https://sonimusic-api.anduxara2408.workers.dev/${song.coverArt}` : '/images/logo-sonimusic.png'} 
+                    src={song.coverArt ? `https://sonimusic-1.onrender.com/${song.coverArt}` : '/images/logo-sonimusic.png'} 
                     alt={song.title}
                     className="w-full aspect-square object-cover rounded-lg"
                   />
@@ -424,7 +424,7 @@ function Discover() {
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <span className="text-gray-500 text-xs w-6 text-center">{index + 1}</span>
                     <img 
-                      src={song.coverArt ? `https://sonimusic-api.anduxara2408.workers.dev/${song.coverArt}` : '/images/logo-sonimusic.png'} 
+                      src={song.coverArt ? `https://sonimusic-1.onrender.com/${song.coverArt}` : '/images/logo-sonimusic.png'} 
                       alt={song.title}
                       className="w-10 h-10 object-cover rounded"
                     />
@@ -463,7 +463,7 @@ function Discover() {
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <img 
-                src={currentSong.cover || (currentSong.coverArt ? `https://sonimusic-api.anduxara2408.workers.dev/${currentSong.coverArt}` : '/images/logo-sonimusic.png')} 
+                src={currentSong.cover || (currentSong.coverArt ? `https://sonimusic-1.onrender.com/${currentSong.coverArt}` : '/images/logo-sonimusic.png')} 
                 alt={currentSong.title}
                 className="w-10 h-10 object-cover rounded"
               />
@@ -485,7 +485,7 @@ function Discover() {
           </div>
           <audio
             ref={audioRef}
-            src={currentSong.audioFile ? `https://sonimusic-api.anduxara2408.workers.dev/${currentSong.audioFile}` : currentSong.audioUrl}
+            src={currentSong.audioFile ? `https://sonimusic-1.onrender.com/${currentSong.audioFile}` : currentSong.audioUrl}
             onEnded={() => setIsPlaying(false)}
             className="hidden"
           />

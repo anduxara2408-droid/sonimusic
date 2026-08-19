@@ -13,7 +13,7 @@ function GenrePage() {
 
   const fetchSongs = async () => {
     try {
-      const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/songs');
+      const response = await axios.get('https://sonimusic-1.onrender.com/api/songs');
       const filtered = response.data.filter(song => 
         song.genre?.toLowerCase() === genre?.toLowerCase()
       );
@@ -182,7 +182,7 @@ function GenrePage() {
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <span className="text-gray-500 text-xs w-5 text-center">{index + 1}</span>
                     <img 
-                      src={song.coverArt ? `https://sonimusic-api.anduxara2408.workers.dev/${song.coverArt}` : '/images/logo-sonimusic.png'} 
+                      src={song.coverArt ? `https://sonimusic-1.onrender.com/${song.coverArt}` : '/images/logo-sonimusic.png'} 
                       alt={song.title}
                       className="w-8 h-8 object-cover rounded"
                     />

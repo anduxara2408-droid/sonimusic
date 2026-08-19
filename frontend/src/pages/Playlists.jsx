@@ -18,7 +18,7 @@ function Playlists() {
 
   const fetchPlaylists = async () => {
     try {
-      const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/playlists/my', {
+      const response = await axios.get('https://sonimusic-1.onrender.com/api/playlists/my', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setPlaylists(response.data);
@@ -33,7 +33,7 @@ function Playlists() {
     e.preventDefault();
     try {
       const response = await axios.post(
-        'https://sonimusic-api.anduxara2408.workers.dev/api/playlists',
+        'https://sonimusic-1.onrender.com/api/playlists',
         newPlaylist,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
@@ -49,7 +49,7 @@ function Playlists() {
   const deletePlaylist = async (id) => {
     if (!confirm('Supprimer cette playlist ?')) return;
     try {
-      await axios.delete(`https://sonimusic-api.anduxara2408.workers.dev/api/playlists/${id}`, {
+      await axios.delete(`https://sonimusic-1.onrender.com/api/playlists/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setPlaylists(playlists.filter(p => p.id !== id));

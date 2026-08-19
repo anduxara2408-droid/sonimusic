@@ -24,7 +24,7 @@ function ProfileModal({ isOpen, onClose }) {
         setIsChecking(true);
         try {
           const response = await axios.post(
-            'https://sonimusic-api.anduxara2408.workers.dev/api/auth/check-email',
+            'https://sonimusic-1.onrender.com/api/auth/check-email',
             { email }
           );
           setEmailAvailable(response.data.available);
@@ -52,7 +52,7 @@ function ProfileModal({ isOpen, onClose }) {
         setIsChecking(true);
         try {
           const response = await axios.post(
-            'https://sonimusic-api.anduxara2408.workers.dev/api/auth/check-username',
+            'https://sonimusic-1.onrender.com/api/auth/check-username',
             { username: name }
           );
           setUsernameAvailable(response.data.available);
@@ -99,7 +99,7 @@ function ProfileModal({ isOpen, onClose }) {
 
       try {
         const response = await axios.post(
-          'https://sonimusic-api.anduxara2408.workers.dev/api/auth/change-email',
+          'https://sonimusic-1.onrender.com/api/auth/change-email',
           {
             currentEmail: user.email,
             newEmail: email

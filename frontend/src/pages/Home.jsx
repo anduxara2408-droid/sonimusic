@@ -22,8 +22,8 @@ function Home() {
   const fetchData = async () => {
     try {
       const [songsRes, artistsRes] = await Promise.all([
-        axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/songs'),
-        axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/artists')
+        axios.get('https://sonimusic-1.onrender.com/api/songs'),
+        axios.get('https://sonimusic-1.onrender.com/api/artists')
       ]);
       setSongs(songsRes.data || []);
       setArtists(artistsRes.data || []);

@@ -50,7 +50,7 @@ const AdminAddArtist = () => {
         formDataToSend.append('profilePic', profilePic);
       }
 
-      await axios.post('https://sonimusic-api.anduxara2408.workers.dev/api/admin/artists/add', formDataToSend, {
+      await axios.post('https://sonimusic-1.onrender.com/api/admin/artists/add', formDataToSend, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'

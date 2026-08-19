@@ -143,7 +143,7 @@ function SubmitMusic() {
       const formData = new FormData();
       formData.append('audio', audioFile);
       
-      const response = await fetch('https://sonimusic-api.anduxara2408.workers.dev/check-audio', {
+      const response = await fetch('https://sonimusic-1.onrender.com/check-audio', {
         method: 'POST',
         body: formData,
       });

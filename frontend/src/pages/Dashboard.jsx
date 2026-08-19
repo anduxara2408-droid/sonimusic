@@ -41,7 +41,7 @@ function Dashboard() {
     try {
       // Récupérer les favoris
       try {
-        const favResponse = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/favorites/my-favorites', {
+        const favResponse = await axios.get('https://sonimusic-1.onrender.com/api/favorites/my-favorites', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         setUserStats(prev => ({ ...prev, totalFavorites: favResponse.data?.length || 0 }));
@@ -52,7 +52,7 @@ function Dashboard() {
 
       // Récupérer les playlists
       try {
-        const playResponse = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/playlists/my', {
+        const playResponse = await axios.get('https://sonimusic-1.onrender.com/api/playlists/my', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         setUserStats(prev => ({ ...prev, totalPlaylists: playResponse.data?.length || 0 }));

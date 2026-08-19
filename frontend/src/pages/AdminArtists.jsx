@@ -10,7 +10,7 @@ function AdminArtists() {
   useEffect(() => {
     const fetchArtists = async () => {
       try {
-        const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/admin/artists', {
+        const response = await axios.get('https://sonimusic-1.onrender.com/api/admin/artists', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         setArtists(response.data);

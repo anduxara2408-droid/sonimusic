@@ -21,7 +21,7 @@ function PlaylistDetail() {
 
   const fetchPlaylist = async () => {
     try {
-      const response = await axios.get(`https://sonimusic-api.anduxara2408.workers.dev/api/playlists/${id}`, {
+      const response = await axios.get(`https://sonimusic-1.onrender.com/api/playlists/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setPlaylist(response.data);
@@ -56,7 +56,7 @@ function PlaylistDetail() {
   const removeSong = async (songId) => {
     if (!confirm('Retirer cette chanson de la playlist ?')) return;
     try {
-      await axios.delete(`https://sonimusic-api.anduxara2408.workers.dev/api/playlists/${id}/songs/${songId}`, {
+      await axios.delete(`https://sonimusic-1.onrender.com/api/playlists/${id}/songs/${songId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setPlaylist({
@@ -72,7 +72,7 @@ function PlaylistDetail() {
   const deletePlaylist = async () => {
     if (!confirm('Supprimer cette playlist ?')) return;
     try {
-      await axios.delete(`https://sonimusic-api.anduxara2408.workers.dev/api/playlists/${id}`, {
+      await axios.delete(`https://sonimusic-1.onrender.com/api/playlists/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       navigate('/playlists');
@@ -155,7 +155,7 @@ function PlaylistDetail() {
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <span className="text-gray-500 text-xs w-6 text-center">{index + 1}</span>
                   <img 
-                    src={item.song?.coverArt ? `https://sonimusic-api.anduxara2408.workers.dev/${item.song.coverArt}` : '/images/logo-sonimusic.png'} 
+                    src={item.song?.coverArt ? `https://sonimusic-1.onrender.com/${item.song.coverArt}` : '/images/logo-sonimusic.png'} 
                     alt={item.song?.title}
                     className="w-10 h-10 object-cover rounded"
                   />
@@ -193,7 +193,7 @@ function PlaylistDetail() {
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <img 
-                src={currentSong.coverArt ? `https://sonimusic-api.anduxara2408.workers.dev/${currentSong.coverArt}` : '/images/logo-sonimusic.png'} 
+                src={currentSong.coverArt ? `https://sonimusic-1.onrender.com/${currentSong.coverArt}` : '/images/logo-sonimusic.png'} 
                 alt={currentSong.title}
                 className="w-10 h-10 object-cover rounded"
               />
@@ -215,7 +215,7 @@ function PlaylistDetail() {
           </div>
           <audio
             ref={audioRef}
-            src={currentSong.audioFile ? `https://sonimusic-api.anduxara2408.workers.dev/${currentSong.audioFile}` : ''}
+            src={currentSong.audioFile ? `https://sonimusic-1.onrender.com/${currentSong.audioFile}` : ''}
             onEnded={() => setIsPlaying(false)}
             className="hidden"
           />

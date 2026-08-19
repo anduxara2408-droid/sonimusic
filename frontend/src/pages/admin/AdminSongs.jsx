@@ -14,7 +14,7 @@ function AdminSongs() {
 
   const fetchSongs = async () => {
     try {
-      const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/songs', {
+      const response = await axios.get('https://sonimusic-1.onrender.com/api/songs', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setSongs(response.data || []);
@@ -28,7 +28,7 @@ function AdminSongs() {
   const handleDelete = async (songId) => {
     if (!confirm('Supprimer cette musique définitivement ?')) return;
     try {
-      await axios.delete(`https://sonimusic-api.anduxara2408.workers.dev/api/admin/songs/${songId}`, {
+      await axios.delete(`https://sonimusic-1.onrender.com/api/admin/songs/${songId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       fetchSongs();

@@ -23,7 +23,7 @@ function Contact() {
 
     try {
       const response = await axios.post(
-        'https://sonimusic-api.anduxara2408.workers.dev/api/contact',
+        'https://sonimusic-1.onrender.com/api/contact',
         formData
       );
       if (response.data.success) {

@@ -167,7 +167,7 @@ function AddSong() {
       formDataToSend.append('cover', files.cover);
 
       const response = await axios.post(
-        'https://sonimusic-api.anduxara2408.workers.dev/api/songs/add',
+        'https://sonimusic-1.onrender.com/api/songs/add',
         formDataToSend,
         {
           headers: {

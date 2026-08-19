@@ -76,7 +76,7 @@ function AudioPlayer({ currentSong, isPlaying, onPlayPause, onNext, onPrevious }
           {/* Info chanson */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <img 
-              src={currentSong.coverArt ? `https://sonimusic-api.anduxara2408.workers.dev/${currentSong.coverArt}` : '/images/logo-sonimusic.png'} 
+              src={currentSong.coverArt ? `https://sonimusic-1.onrender.com/${currentSong.coverArt}` : '/images/logo-sonimusic.png'} 
               alt={currentSong.title}
               className="w-10 h-10 object-cover rounded"
             />
@@ -158,7 +158,7 @@ function AudioPlayer({ currentSong, isPlaying, onPlayPause, onNext, onPrevious }
         {/* Élément audio caché */}
         <audio
           ref={audioRef}
-          src={currentSong.audioFile ? `https://sonimusic-api.anduxara2408.workers.dev/${currentSong.audioFile}` : ''}
+          src={currentSong.audioFile ? `https://sonimusic-1.onrender.com/${currentSong.audioFile}` : ''}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleTimeUpdate}
           onEnded={() => {

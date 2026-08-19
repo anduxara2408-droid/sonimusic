@@ -10,7 +10,7 @@ function Artists() {
   useEffect(() => {
     const fetchArtists = async () => {
       try {
-        const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/artists');
+        const response = await axios.get('https://sonimusic-1.onrender.com/api/artists');
         setArtists(response.data || []);
         setLoading(false);
       } catch (error) {

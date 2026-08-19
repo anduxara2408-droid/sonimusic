@@ -3,13 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "build": "prisma generate"
+    "start": "node server.js"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
-    "@prisma/extension-accelerate": "^3.0.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",

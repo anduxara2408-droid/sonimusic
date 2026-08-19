@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/auth/me')
+      axios.get('https://sonimusic-1.onrender.com/api/auth/me')
         .then(response => {
           setUser(response.data);
           setLoading(false);
@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('https://sonimusic-api.anduxara2408.workers.dev/api/auth/login', {
+      const response = await axios.post('https://sonimusic-1.onrender.com/api/auth/login', {
         email,
         password
       });
@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const response = await axios.post('https://sonimusic-api.anduxara2408.workers.dev/api/auth/register', userData);
+      const response = await axios.post('https://sonimusic-1.onrender.com/api/auth/register', userData);
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;

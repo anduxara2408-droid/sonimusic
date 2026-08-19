@@ -29,7 +29,7 @@ const AdminAddSong = () => {
   useEffect(() => {
     const fetchArtists = async () => {
       try {
-        const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/artists');
+        const response = await axios.get('https://sonimusic-1.onrender.com/api/artists');
         setArtists(response.data || []);
       } catch (error) {
         console.error('Erreur chargement artistes:', error);
@@ -59,7 +59,7 @@ const AdminAddSong = () => {
       formDataToSend.append('audio', files.audio);
       formDataToSend.append('cover', files.cover);
 
-      await axios.post('https://sonimusic-api.anduxara2408.workers.dev/api/admin/songs/add', formDataToSend, {
+      await axios.post('https://sonimusic-1.onrender.com/api/admin/songs/add', formDataToSend, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'

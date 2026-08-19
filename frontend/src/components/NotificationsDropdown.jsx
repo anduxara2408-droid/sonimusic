@@ -17,7 +17,7 @@ const NotificationsDropdown = () => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/notifications', {
+      const response = await axios.get('https://sonimusic-1.onrender.com/api/notifications', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = response.data || [];
@@ -30,7 +30,7 @@ const NotificationsDropdown = () => {
 
   const markAsRead = async (notificationId) => {
     try {
-      await axios.post('https://sonimusic-api.anduxara2408.workers.dev/api/notifications/read',
+      await axios.post('https://sonimusic-1.onrender.com/api/notifications/read',
         { notificationId },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );

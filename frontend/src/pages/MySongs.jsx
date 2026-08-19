@@ -17,7 +17,7 @@ function MySongs() {
   useEffect(() => {
     const fetchSongs = async () => {
       try {
-        const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/songs/my-songs', {
+        const response = await axios.get('https://sonimusic-1.onrender.com/api/songs/my-songs', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         setSongs(response.data);
@@ -91,7 +91,7 @@ function MySongs() {
                     <div className="flex items-center space-x-4">
                       {song.coverArt && (
                         <img 
-                          src={`https://sonimusic-api.anduxara2408.workers.dev/${song.coverArt}`} 
+                          src={`https://sonimusic-1.onrender.com/${song.coverArt}`} 
                           alt={song.title}
                           className="w-16 h-16 object-cover rounded"
                         />

@@ -33,7 +33,7 @@ const AdminAlbums = () => {
 
   const fetchAlbums = async () => {
     try {
-      const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/albums');
+      const response = await axios.get('https://sonimusic-1.onrender.com/api/albums');
       setAlbums(response.data || []);
     } catch (error) {
       console.error('Erreur chargement albums:', error);
@@ -42,7 +42,7 @@ const AdminAlbums = () => {
 
   const fetchArtists = async () => {
     try {
-      const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/artists');
+      const response = await axios.get('https://sonimusic-1.onrender.com/api/artists');
       setArtists(response.data || []);
     } catch (error) {
       console.error('Erreur chargement artistes:', error);
@@ -51,7 +51,7 @@ const AdminAlbums = () => {
 
   const fetchSongs = async () => {
     try {
-      const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/songs');
+      const response = await axios.get('https://sonimusic-1.onrender.com/api/songs');
       setSongs(response.data || []);
     } catch (error) {
       console.error('Erreur chargement musiques:', error);
@@ -79,7 +79,7 @@ const AdminAlbums = () => {
         formDataToSend.append('cover', cover);
       }
 
-      await axios.post('https://sonimusic-api.anduxara2408.workers.dev/api/admin/albums/add', formDataToSend, {
+      await axios.post('https://sonimusic-1.onrender.com/api/admin/albums/add', formDataToSend, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -113,7 +113,7 @@ const AdminAlbums = () => {
   const deleteAlbum = async (albumId) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet album ?')) return;
     try {
-      await axios.delete(`https://sonimusic-api.anduxara2408.workers.dev/api/admin/albums/${albumId}`, {
+      await axios.delete(`https://sonimusic-1.onrender.com/api/admin/albums/${albumId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setSuccess('✅ Album supprimé');

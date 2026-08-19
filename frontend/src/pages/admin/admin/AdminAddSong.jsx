@@ -45,7 +45,7 @@ const AdminAddSong = () => {
       formDataToSend.append('audio', files.audio);
       formDataToSend.append('cover', files.cover);
 
-      await axios.post('https://sonimusic-api.anduxara2408.workers.dev/api/admin/songs/add', formDataToSend, {
+      await axios.post('https://sonimusic-1.onrender.com/api/admin/songs/add', formDataToSend, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'

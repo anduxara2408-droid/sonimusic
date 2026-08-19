@@ -33,7 +33,7 @@ function ArtistProfile() {
           setLoading(false);
           return;
         }
-        const response = await axios.get(`https://sonimusic-api.anduxara2408.workers.dev/api/artists/${artistId}`);
+        const response = await axios.get(`https://sonimusic-1.onrender.com/api/artists/${artistId}`);
         setArtist(response.data);
         setLoading(false);
       } catch (error) {
@@ -56,7 +56,7 @@ function ArtistProfile() {
 
   const fetchFavorites = async () => {
     try {
-      const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/favorites/my-favorites', {
+      const response = await axios.get('https://sonimusic-1.onrender.com/api/favorites/my-favorites', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setFavorites(response.data || []);
@@ -72,7 +72,7 @@ function ArtistProfile() {
     }
 
     try {
-      await axios.post('https://sonimusic-api.anduxara2408.workers.dev/api/favorites/toggle',
+      await axios.post('https://sonimusic-1.onrender.com/api/favorites/toggle',
         { songId },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );

@@ -24,7 +24,7 @@ function VerifyEmail() {
   const verifyEmail = async () => {
     try {
       const response = await axios.post(
-        'https://sonimusic-api.anduxara2408.workers.dev/api/auth/verify',
+        'https://sonimusic-1.onrender.com/api/auth/verify',
         { email, token }
       );
       

@@ -25,7 +25,7 @@ function VerifyEmailChange() {
   const verifyChange = async () => {
     try {
       const response = await axios.post(
-        'https://sonimusic-api.anduxara2408.workers.dev/api/auth/confirm-email-change',
+        'https://sonimusic-1.onrender.com/api/auth/confirm-email-change',
         { email, token, type }
       );
       

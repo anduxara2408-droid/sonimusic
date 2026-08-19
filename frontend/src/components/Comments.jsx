@@ -20,7 +20,7 @@ const Comments = ({ songId }) => {
 
   const fetchComments = async () => {
     try {
-      const response = await axios.get(`https://sonimusic-api.anduxara2408.workers.dev/api/comments?songId=${songId}`);
+      const response = await axios.get(`https://sonimusic-1.onrender.com/api/comments?songId=${songId}`);
       setComments(response.data || []);
       setLoading(false);
     } catch (error) {
@@ -41,7 +41,7 @@ const Comments = ({ songId }) => {
 
     setSubmitting(true);
     try {
-      const response = await axios.post('https://sonimusic-api.anduxara2408.workers.dev/api/comments',
+      const response = await axios.post('https://sonimusic-1.onrender.com/api/comments',
         { songId: parseInt(songId), content: content.trim(), parentId },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
@@ -74,7 +74,7 @@ const Comments = ({ songId }) => {
     }
 
     try {
-      const response = await axios.post(`https://sonimusic-api.anduxara2408.workers.dev/api/comments/${commentId}/like`,
+      const response = await axios.post(`https://sonimusic-1.onrender.com/api/comments/${commentId}/like`,
         {},
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
@@ -100,7 +100,7 @@ const Comments = ({ songId }) => {
     if (!confirm('Supprimer ce commentaire ?')) return;
 
     try {
-      await axios.delete(`https://sonimusic-api.anduxara2408.workers.dev/api/comments/${commentId}`,
+      await axios.delete(`https://sonimusic-1.onrender.com/api/comments/${commentId}`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
 

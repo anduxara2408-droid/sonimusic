@@ -14,7 +14,7 @@ const UserProfile = () => {
     const fetchUser = async () => {
       try {
         // Récupérer les infos de l'utilisateur
-        const response = await axios.get(`https://sonimusic-api.anduxara2408.workers.dev/api/users/${id}`);
+        const response = await axios.get(`https://sonimusic-1.onrender.com/api/users/${id}`);
         setProfileUser(response.data);
         setLoading(false);
       } catch (error) {

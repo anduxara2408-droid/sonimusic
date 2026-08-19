@@ -15,7 +15,7 @@ const AdminUsers = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/admin/users', {
+      const response = await axios.get('https://sonimusic-1.onrender.com/api/admin/users', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setUsers(response.data || []);
@@ -29,7 +29,7 @@ const AdminUsers = () => {
 
   const changeRole = async (userId, newRole) => {
     try {
-      await axios.patch(`https://sonimusic-api.anduxara2408.workers.dev/api/admin/users/${userId}/role`, 
+      await axios.patch(`https://sonimusic-1.onrender.com/api/admin/users/${userId}/role`, 
         { role: newRole },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
@@ -43,7 +43,7 @@ const AdminUsers = () => {
   const toggleBlock = async (userId, currentStatus) => {
     const action = currentStatus === 'blocked' ? 'unblock' : 'block';
     try {
-      await axios.patch(`https://sonimusic-api.anduxara2408.workers.dev/api/admin/users/${userId}/${action}`,
+      await axios.patch(`https://sonimusic-1.onrender.com/api/admin/users/${userId}/${action}`,
         {},
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
@@ -57,7 +57,7 @@ const AdminUsers = () => {
   const deleteUser = async (userId) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) return;
     try {
-      await axios.delete(`https://sonimusic-api.anduxara2408.workers.dev/api/admin/users/${userId}`, {
+      await axios.delete(`https://sonimusic-1.onrender.com/api/admin/users/${userId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setSuccess('✅ Utilisateur supprimé');

@@ -19,10 +19,10 @@ function Library() {
   const fetchData = async () => {
     try {
       const [playlistsRes, favoritesRes] = await Promise.all([
-        axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/playlists/my', {
+        axios.get('https://sonimusic-1.onrender.com/api/playlists/my', {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/favorites/my-favorites', {
+        axios.get('https://sonimusic-1.onrender.com/api/favorites/my-favorites', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
@@ -157,7 +157,7 @@ function Library() {
                     <div className="flex items-center gap-4 flex-1 min-w-0">
                       <span className="text-gray-500 text-xs w-6 text-center">{index + 1}</span>
                       <img 
-                        src={fav.song?.coverArt ? `https://sonimusic-api.anduxara2408.workers.dev/${fav.song.coverArt}` : '/images/logo-sonimusic.png'} 
+                        src={fav.song?.coverArt ? `https://sonimusic-1.onrender.com/${fav.song.coverArt}` : '/images/logo-sonimusic.png'} 
                         alt={fav.song?.title}
                         className="w-10 h-10 object-cover rounded"
                       />

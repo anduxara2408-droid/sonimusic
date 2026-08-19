@@ -16,7 +16,7 @@ function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await axios.post('https://sonimusic-api.anduxara2408.workers.dev/api/auth/forgot-password', {
+      const response = await axios.post('https://sonimusic-1.onrender.com/api/auth/forgot-password', {
         email
       });
 

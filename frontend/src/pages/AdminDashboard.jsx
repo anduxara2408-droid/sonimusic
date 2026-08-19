@@ -45,11 +45,11 @@ const AdminDashboard = () => {
     setLoading(true);
     try {
       // Récupérer les musiques
-      const songsRes = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/songs');
+      const songsRes = await axios.get('https://sonimusic-1.onrender.com/api/songs');
       setSongs(songsRes.data || []);
       
       // Récupérer les artistes
-      const artistsRes = await axios.get('https://sonimusic-api.anduxara2408.workers.dev/api/artists');
+      const artistsRes = await axios.get('https://sonimusic-1.onrender.com/api/artists');
       setArtists(artistsRes.data || []);
       
       // Compter les stats
@@ -72,7 +72,7 @@ const AdminDashboard = () => {
   // Approuver une musique
   const approveSong = async (songId) => {
     try {
-      await axios.post(`https://sonimusic-api.anduxara2408.workers.dev/api/admin/songs/${songId}/approve`, {}, {
+      await axios.post(`https://sonimusic-1.onrender.com/api/admin/songs/${songId}/approve`, {}, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setSuccess('Musique approuvée avec succès !');
@@ -85,7 +85,7 @@ const AdminDashboard = () => {
   // Refuser une musique
   const rejectSong = async (songId) => {
     try {
-      await axios.post(`https://sonimusic-api.anduxara2408.workers.dev/api/admin/songs/${songId}/reject`, {}, {
+      await axios.post(`https://sonimusic-1.onrender.com/api/admin/songs/${songId}/reject`, {}, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setSuccess('Musique refusée');
@@ -99,7 +99,7 @@ const AdminDashboard = () => {
   const deleteSong = async (songId) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette musique ?')) return;
     try {
-      await axios.delete(`https://sonimusic-api.anduxara2408.workers.dev/api/admin/songs/${songId}`, {
+      await axios.delete(`https://sonimusic-1.onrender.com/api/admin/songs/${songId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setSuccess('Musique supprimée');
@@ -113,7 +113,7 @@ const AdminDashboard = () => {
   const deleteArtist = async (artistId) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet artiste ?')) return;
     try {
-      await axios.delete(`https://sonimusic-api.anduxara2408.workers.dev/api/admin/artists/${artistId}`, {
+      await axios.delete(`https://sonimusic-1.onrender.com/api/admin/artists/${artistId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setSuccess('Artiste supprimé');

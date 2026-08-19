@@ -128,7 +128,7 @@ function AdminUpload() {
       formDataToSend.append('cover', files.cover);
 
       await axios.post(
-        'https://sonimusic-api.anduxara2408.workers.dev/api/admin/upload',
+        'https://sonimusic-1.onrender.com/api/admin/upload',
         formDataToSend,
         {
           headers: {
