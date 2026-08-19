@@ -336,7 +336,7 @@ app.get('/api/songs/:id', async (req, res) => {
 // ROUTES ARTISTES
 // ============================================================
 
-// Récupérer tous les artistes (exclure l'admin)
+// Récupérer tous les artistes
 app.get('/api/artists', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -660,8 +660,10 @@ app.post('/api/notifications/read', async (req, res) => {
 });
 
 // ============================================================
-// ROUTES COMMENTAIRES
+// ROUTES COMMENTAIRES (COMPLET)
 // ============================================================
+
+// Récupérer les commentaires avec infos utilisateur
 app.get('/api/comments', async (req, res) => {
   try {
     const { songId } = req.query;
@@ -670,19 +672,41 @@ app.get('/api/comments', async (req, res) => {
     }
 
     const result = await pool.query(`
-      SELECT c.*, u.name, u.email FROM "Comment" c
+      SELECT 
+        c.*,
+        u.name as "userName",
+        u.email as "userEmail",
+        u."profilePic" as "userProfilePic"
+      FROM "Comment" c
       JOIN "User" u ON c."userId" = u.id
       WHERE c."songId" = $1
       ORDER BY c."createdAt" DESC
     `, [parseInt(songId)]);
 
-    res.json(result.rows);
+    // Construire l'arborescence des commentaires
+    const commentMap = {};
+    const rootComments = [];
+
+    result.rows.forEach(c => {
+      commentMap[c.id] = { ...c, replies: [] };
+    });
+
+    result.rows.forEach(c => {
+      if (c.parentId && commentMap[c.parentId]) {
+        commentMap[c.parentId].replies.push(commentMap[c.id]);
+      } else {
+        rootComments.push(commentMap[c.id]);
+      }
+    });
+
+    res.json(rootComments);
   } catch (error) {
     console.error('Erreur commentaires:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des commentaires' });
   }
 });
 
+// Ajouter un commentaire
 app.post('/api/comments', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -698,27 +722,139 @@ app.post('/api/comments', async (req, res) => {
       return res.status(400).json({ error: 'SongId et contenu requis' });
     }
 
-    const result = await pool.query(`
-      INSERT INTO "Comment" (content, "userId", "songId", "parentId", "createdAt", "updatedAt")
-      VALUES ($1, $2, $3, $4, NOW(), NOW())
-      RETURNING *
-    `, [content, decoded.id, parseInt(songId), parentId || null]);
-
+    // Récupérer les infos de l'utilisateur
     const userResult = await pool.query(
-      'SELECT name, email FROM "User" WHERE id = $1',
+      'SELECT id, name, email, "profilePic" FROM "User" WHERE id = $1',
       [decoded.id]
     );
 
+    const user = userResult.rows[0];
+
+    const result = await pool.query(
+      `INSERT INTO "Comment" (content, "userId", "songId", "parentId", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, NOW(), NOW())
+       RETURNING *`,
+      [content, decoded.id, parseInt(songId), parentId || null]
+    );
+
+    const newComment = {
+      ...result.rows[0],
+      userName: user.name,
+      userEmail: user.email,
+      userProfilePic: user.profilePic,
+      replies: [],
+      likes: 0,
+      likedBy: []
+    };
+
     res.json({
       success: true,
-      comment: {
-        ...result.rows[0],
-        user: userResult.rows[0] || { name: 'Utilisateur' }
-      }
+      comment: newComment
     });
   } catch (error) {
     console.error('Erreur ajout commentaire:', error);
     res.status(500).json({ error: 'Erreur lors de l\'ajout du commentaire' });
+  }
+});
+
+// Liker un commentaire
+app.post('/api/comments/:id/like', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
+    const commentId = parseInt(req.params.id);
+
+    // Récupérer le commentaire
+    const commentResult = await pool.query(
+      'SELECT * FROM "Comment" WHERE id = $1',
+      [commentId]
+    );
+
+    if (commentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Commentaire non trouvé' });
+    }
+
+    const comment = commentResult.rows[0];
+    let likedBy = comment.likedBy || [];
+
+    // Vérifier si l'utilisateur a déjà liké
+    const index = likedBy.indexOf(decoded.id);
+    let liked = false;
+
+    if (index > -1) {
+      likedBy.splice(index, 1);
+      liked = false;
+    } else {
+      likedBy.push(decoded.id);
+      liked = true;
+    }
+
+    await pool.query(
+      'UPDATE "Comment" SET likes = $1, "likedBy" = $2 WHERE id = $3',
+      [likedBy.length, JSON.stringify(likedBy), commentId]
+    );
+
+    res.json({
+      success: true,
+      likes: likedBy.length,
+      liked: liked
+    });
+  } catch (error) {
+    console.error('Erreur like commentaire:', error);
+    res.status(500).json({ error: 'Erreur lors du like du commentaire' });
+  }
+});
+
+// Supprimer un commentaire
+app.delete('/api/comments/:id', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
+    const commentId = parseInt(req.params.id);
+
+    // Vérifier que l'utilisateur est le propriétaire ou admin
+    const commentResult = await pool.query(
+      'SELECT * FROM "Comment" WHERE id = $1',
+      [commentId]
+    );
+
+    if (commentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Commentaire non trouvé' });
+    }
+
+    const comment = commentResult.rows[0];
+
+    // Vérifier si l'utilisateur est le propriétaire ou admin
+    const userResult = await pool.query(
+      'SELECT role FROM "User" WHERE id = $1',
+      [decoded.id]
+    );
+
+    const userRole = userResult.rows[0]?.role;
+
+    if (comment.userId !== decoded.id && userRole !== 'ADMIN') {
+      return res.status(403).json({ error: 'Non autorisé' });
+    }
+
+    await pool.query(
+      'DELETE FROM "Comment" WHERE id = $1',
+      [commentId]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur suppression commentaire:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression du commentaire' });
   }
 });
 
@@ -782,4 +918,5 @@ app.listen(PORT, () => {
   console.log(`🔐 Login: /api/auth/login`);
   console.log(`🎵 Songs: /api/songs`);
   console.log(`🎤 Artists: /api/artists`);
+  console.log(`💬 Comments: /api/comments`);
 });
