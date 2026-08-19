@@ -2,11 +2,17 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import pkg from 'pg';
+const { Pool } = pkg;
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const prisma = new PrismaClient();
+
+// Connexion directe à PostgreSQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
 app.use(cors({
   origin: ['https://sonimusic.online', 'http://localhost:5173', 'https://sonimusic-1.onrender.com'],
@@ -17,12 +23,22 @@ app.use(express.json());
 // ============================================================
 // ROUTE DE SANTÉ
 // ============================================================
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    message: 'SONIMUSIC API is running',
-    timestamp: new Date().toISOString()
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    await pool.query('SELECT NOW()');
+    res.json({
+      status: 'OK',
+      message: 'SONIMUSIC API is running',
+      database: 'connected'
+    });
+  } catch (error) {
+    res.json({
+      status: 'OK',
+      message: 'SONIMUSIC API is running',
+      database: 'error',
+      error: error.message
+    });
+  }
 });
 
 // ============================================================
@@ -49,38 +65,25 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, name, password, role, artistName, bio, country } = req.body;
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
-
-    if (existingUser) {
+    // Vérifier si l'utilisateur existe déjà
+    const existing = await pool.query('SELECT * FROM "User" WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'Cet email est déjà utilisé' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        password: hashedPassword,
-        role: role || 'LISTENER',
-        artistName: role === 'ARTIST' ? artistName : null,
-        bio: role === 'ARTIST' ? bio : null,
-        country: role === 'ARTIST' ? country : null,
-        emailVerified: true
-      }
-    });
+    const result = await pool.query(
+      `INSERT INTO "User" (email, password, name, role, "artistName", bio, country, "emailVerified", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+       RETURNING id, email, name, role`,
+      [email, hashedPassword, name, role || 'LISTENER', artistName || null, bio || null, country || null, true]
+    );
 
     res.status(201).json({
       success: true,
       message: 'Inscription réussie !',
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role
-      }
+      user: result.rows[0]
     });
 
   } catch (error) {
@@ -93,17 +96,20 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('🔐 Tentative de connexion:', email);
 
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
+    const result = await pool.query('SELECT * FROM "User" WHERE email = $1', [email]);
 
-    if (!user) {
+    if (result.rows.length === 0) {
+      console.log('❌ Utilisateur non trouvé:', email);
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
+    const user = result.rows[0];
     const isValid = await bcrypt.compare(password, user.password);
+
     if (!isValid) {
+      console.log('❌ Mot de passe incorrect pour:', email);
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
@@ -112,6 +118,8 @@ app.post('/api/auth/login', async (req, res) => {
       process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789',
       { expiresIn: '7d' }
     );
+
+    console.log('✅ Connexion réussie:', email);
 
     res.json({
       success: true,
@@ -125,7 +133,7 @@ app.post('/api/auth/login', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erreur connexion:', error);
+    console.error('❌ Erreur connexion:', error);
     res.status(500).json({ error: 'Erreur lors de la connexion' });
   }
 });
@@ -141,27 +149,17 @@ app.get('/api/auth/me', async (req, res) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        artistName: true,
-        bio: true,
-        country: true,
-        profilePic: true,
-        emailVerified: true,
-        createdAt: true
-      }
-    });
+    const result = await pool.query(
+      `SELECT id, email, name, role, "artistName", bio, country, "profilePic", "emailVerified", "createdAt"
+       FROM "User" WHERE id = $1`,
+      [decoded.id]
+    );
 
-    if (!user) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Utilisateur non trouvé' });
     }
 
-    res.json(user);
+    res.json(result.rows[0]);
 
   } catch (error) {
     console.error('Erreur /me:', error);
@@ -185,4 +183,5 @@ app.post('/api/auth/reset-password', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Health check: /api/health`);
+  console.log(`🔐 Login: /api/auth/login`);
 });
