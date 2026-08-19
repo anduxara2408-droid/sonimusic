@@ -71,7 +71,10 @@ app.get('/', (req, res) => {
       favorites: '/api/favorites/my-favorites',
       playlists: '/api/playlists/my',
       notifications: '/api/notifications',
-      comments: '/api/comments'
+      comments: '/api/comments',
+      songs: '/api/songs',
+      artists: '/api/artists',
+      albums: '/api/albums'
     }
   });
 });
@@ -196,7 +199,6 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const { email } = req.body;
     console.log('🔑 Demande de réinitialisation pour:', email);
 
-    // Vérifier si l'utilisateur existe
     const userResult = await pool.query('SELECT * FROM "User" WHERE email = $1', [email]);
 
     if (userResult.rows.length === 0) {
@@ -208,11 +210,9 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
     const user = userResult.rows[0];
 
-    // Générer un token de réinitialisation
     const resetToken = crypto.randomUUID();
-    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 heure
+    const resetTokenExpiry = new Date(Date.now() + 3600000);
 
-    // Sauvegarder le token dans la base de données
     await pool.query(
       `UPDATE "User" 
        SET "resetToken" = $1, "resetTokenExpiry" = $2 
@@ -220,12 +220,8 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       [resetToken, resetTokenExpiry, user.id]
     );
 
-    // Construire le lien de réinitialisation
     const resetUrl = `${process.env.FRONTEND_URL || 'https://sonimusic.online'}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
-    console.log('📧 Envoi de l\'email à:', email);
-
-    // Envoyer l'email
     await transporter.sendMail({
       from: `"SONIMUSIC" <${process.env.EMAIL_USER || 'noreply@sonimusic.online'}>`,
       to: email,
@@ -235,12 +231,10 @@ app.post('/api/auth/forgot-password', async (req, res) => {
           <h1 style="color: #d4af37;">🔑 SONIMUSIC</h1>
           <h2>Réinitialisation de mot de passe</h2>
           <p>Vous avez demandé à réinitialiser votre mot de passe.</p>
-          <p>Cliquez sur le bouton ci-dessous :</p>
           <a href="${resetUrl}" style="display:inline-block;padding:12px 30px;background:#d4af37;color:black;text-decoration:none;border-radius:5px;margin:20px 0;">
             🔐 Réinitialiser mon mot de passe
           </a>
           <p style="color:#666;font-size:12px;">⏳ Ce lien expire dans 1 heure.</p>
-          <p style="color:#666;font-size:12px;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
         </div>
       `
     });
@@ -263,7 +257,6 @@ app.post('/api/auth/reset-password', async (req, res) => {
   try {
     const { email, token, newPassword } = req.body;
 
-    // Vérifier le token
     const userResult = await pool.query(
       `SELECT * FROM "User" 
        WHERE email = $1 
@@ -277,11 +270,8 @@ app.post('/api/auth/reset-password', async (req, res) => {
     }
 
     const user = userResult.rows[0];
-
-    // Hacher le nouveau mot de passe
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Mettre à jour le mot de passe et supprimer le token
     await pool.query(
       `UPDATE "User" 
        SET password = $1, "resetToken" = NULL, "resetTokenExpiry" = NULL 
@@ -297,6 +287,144 @@ app.post('/api/auth/reset-password', async (req, res) => {
   } catch (error) {
     console.error('Erreur reset-password:', error);
     res.status(500).json({ error: 'Erreur lors de la réinitialisation' });
+  }
+});
+
+// ============================================================
+// ROUTES SONGS (MUSIQUES)
+// ============================================================
+
+// Récupérer toutes les musiques
+app.get('/api/songs', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT s.*, u.name as "artistName", u.id as "artistId"
+       FROM "Song" s
+       LEFT JOIN "User" u ON s."artistId" = u.id
+       WHERE s.status = 'ACCEPTED'
+       ORDER BY s."createdAt" DESC
+       LIMIT 50`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur récupération musiques:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des musiques' });
+  }
+});
+
+// Récupérer une musique par ID
+app.get('/api/songs/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const result = await pool.query(
+      `SELECT s.*, u.name as "artistName", u.id as "artistId"
+       FROM "Song" s
+       LEFT JOIN "User" u ON s."artistId" = u.id
+       WHERE s.id = $1`,
+      [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Musique non trouvée' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Erreur récupération musique:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération de la musique' });
+  }
+});
+
+// ============================================================
+// ROUTES ARTISTES
+// ============================================================
+
+// Récupérer tous les artistes
+app.get('/api/artists', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, "artistName", bio, country, "profilePic", genre
+       FROM "User"
+       WHERE role = 'ARTIST' OR role = 'ADMIN'
+       ORDER BY name`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur récupération artistes:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des artistes' });
+  }
+});
+
+// Récupérer un artiste par ID avec ses musiques
+app.get('/api/artists/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    const artistResult = await pool.query(
+      `SELECT id, name, "artistName", bio, country, "profilePic", genre
+       FROM "User"
+       WHERE id = $1 AND (role = 'ARTIST' OR role = 'ADMIN')`,
+      [id]
+    );
+    
+    if (artistResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Artiste non trouvé' });
+    }
+    
+    const songsResult = await pool.query(
+      `SELECT * FROM "Song"
+       WHERE "artistId" = $1 AND status = 'ACCEPTED'
+       ORDER BY "createdAt" DESC`,
+      [id]
+    );
+    
+    const artist = artistResult.rows[0];
+    artist.songs = songsResult.rows;
+    artist.stats = {
+      totalSongs: songsResult.rows.length,
+      totalPlays: 0,
+      totalFavorites: 0
+    };
+    
+    res.json(artist);
+  } catch (error) {
+    console.error('Erreur récupération artiste:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération de l\'artiste' });
+  }
+});
+
+// ============================================================
+// ROUTES ALBUMS
+// ============================================================
+
+app.get('/api/albums', async (req, res) => {
+  try {
+    const albums = [
+      {
+        id: 1,
+        title: "Fii Siire",
+        artistId: 1,
+        artist: { id: 1, name: "Demba Tandia" },
+        year: 2022,
+        coverArt: "/images/albums/fii-siire.jpg",
+        description: "Album Fii Siire de Demba Tandia",
+        songs: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        createdAt: new Date().toISOString()
+      },
+      {
+        id: 2,
+        title: "Bataaxe",
+        artistId: 1,
+        artist: { id: 1, name: "Demba Tandia" },
+        year: 2023,
+        coverArt: "/images/albums/bataaxe.jpg",
+        description: "Album Bataaxe de Demba Tandia",
+        songs: [11, 12, 13, 14, 15, 16, 17, 18],
+        createdAt: new Date().toISOString()
+      }
+    ];
+    res.json(albums);
+  } catch (error) {
+    console.error('Erreur récupération albums:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des albums' });
   }
 });
 
@@ -605,10 +733,63 @@ app.post('/api/comments', async (req, res) => {
 });
 
 // ============================================================
+// ADMIN - ROUTES SPÉCIFIQUES
+// ============================================================
+
+// Récupérer les musiques en attente (admin)
+app.get('/api/admin/songs/pending', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT s.*, u.name as "artistName", u.id as "artistId"
+       FROM "Song" s
+       LEFT JOIN "User" u ON s."artistId" = u.id
+       WHERE s.status = 'PENDING'
+       ORDER BY s."createdAt" DESC`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur récupération musiques en attente:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des musiques en attente' });
+  }
+});
+
+// Approuver une musique (admin)
+app.post('/api/admin/songs/:id/approve', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await pool.query(
+      `UPDATE "Song" SET status = 'ACCEPTED', "isVerified" = true WHERE id = $1`,
+      [id]
+    );
+    res.json({ success: true, message: 'Musique approuvée' });
+  } catch (error) {
+    console.error('Erreur approbation musique:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'approbation' });
+  }
+});
+
+// Refuser une musique (admin)
+app.post('/api/admin/songs/:id/reject', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await pool.query(
+      `UPDATE "Song" SET status = 'REJECTED' WHERE id = $1`,
+      [id]
+    );
+    res.json({ success: true, message: 'Musique refusée' });
+  } catch (error) {
+    console.error('Erreur refus musique:', error);
+    res.status(500).json({ error: 'Erreur lors du refus' });
+  }
+});
+
+// ============================================================
 // DÉMARRAGE DU SERVEUR
 // ============================================================
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Health check: /api/health`);
   console.log(`🔐 Login: /api/auth/login`);
+  console.log(`🎵 Songs: /api/songs`);
+  console.log(`🎤 Artists: /api/artists`);
 });
