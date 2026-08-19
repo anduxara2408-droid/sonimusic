@@ -608,3 +608,4 @@ app.listen(PORT, () => {
   console.log(`📡 Health check: /api/health`);
   console.log(`🔐 Login: /api/auth/login`);
 });
+
