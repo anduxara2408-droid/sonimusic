@@ -297,14 +297,14 @@ app.post('/api/auth/reset-password', async (req, res) => {
 // Récupérer toutes les musiques
 app.get('/api/songs', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT s.*, u.name as "artistName", u.id as "artistId"
-       FROM "Song" s
-       LEFT JOIN "User" u ON s."artistId" = u.id
-       WHERE s.status = 'ACCEPTED'
-       ORDER BY s."createdAt" DESC
-       LIMIT 50`
-    );
+    const result = await pool.query(`
+      SELECT s.*, u.name as "artistName", u.id as "artistId"
+      FROM "Song" s
+      LEFT JOIN "User" u ON s."artistId" = u.id
+      WHERE s.status = 'ACCEPTED'
+      ORDER BY s."createdAt" DESC
+      LIMIT 50
+    `);
     res.json(result.rows);
   } catch (error) {
     console.error('Erreur récupération musiques:', error);
@@ -316,13 +316,12 @@ app.get('/api/songs', async (req, res) => {
 app.get('/api/songs/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const result = await pool.query(
-      `SELECT s.*, u.name as "artistName", u.id as "artistId"
-       FROM "Song" s
-       LEFT JOIN "User" u ON s."artistId" = u.id
-       WHERE s.id = $1`,
-      [id]
-    );
+    const result = await pool.query(`
+      SELECT s.*, u.name as "artistName", u.id as "artistId"
+      FROM "Song" s
+      LEFT JOIN "User" u ON s."artistId" = u.id
+      WHERE s.id = $1
+    `, [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Musique non trouvée' });
     }
@@ -340,16 +339,16 @@ app.get('/api/songs/:id', async (req, res) => {
 // Récupérer tous les artistes
 app.get('/api/artists', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT id, name, "artistName", bio, country, "profilePic", genre
-       FROM "User"
-       WHERE role = 'ARTIST' OR role = 'ADMIN'
-       ORDER BY name`
-    );
+    const result = await pool.query(`
+      SELECT id, name, "artistName", bio, country, "profilePic"
+      FROM "User"
+      WHERE role = 'ARTIST' OR role = 'ADMIN'
+      ORDER BY name
+    `);
     res.json(result.rows);
   } catch (error) {
-    console.error('Erreur récupération artistes:', error);
-    res.status(500).json({ error: 'Erreur lors de la récupération des artistes' });
+    console.error('❌ Erreur récupération artistes:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des artistes', details: error.message });
   }
 });
 
@@ -358,23 +357,21 @@ app.get('/api/artists/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     
-    const artistResult = await pool.query(
-      `SELECT id, name, "artistName", bio, country, "profilePic", genre
-       FROM "User"
-       WHERE id = $1 AND (role = 'ARTIST' OR role = 'ADMIN')`,
-      [id]
-    );
+    const artistResult = await pool.query(`
+      SELECT id, name, "artistName", bio, country, "profilePic"
+      FROM "User"
+      WHERE id = $1 AND (role = 'ARTIST' OR role = 'ADMIN')
+    `, [id]);
     
     if (artistResult.rows.length === 0) {
       return res.status(404).json({ error: 'Artiste non trouvé' });
     }
     
-    const songsResult = await pool.query(
-      `SELECT * FROM "Song"
-       WHERE "artistId" = $1 AND status = 'ACCEPTED'
-       ORDER BY "createdAt" DESC`,
-      [id]
-    );
+    const songsResult = await pool.query(`
+      SELECT * FROM "Song"
+      WHERE "artistId" = $1 AND status = 'ACCEPTED'
+      ORDER BY "createdAt" DESC
+    `, [id]);
     
     const artist = artistResult.rows[0];
     artist.songs = songsResult.rows;
@@ -441,13 +438,12 @@ app.get('/api/favorites/my-favorites', async (req, res) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
 
-    const result = await pool.query(
-      `SELECT f.*, s.* FROM "Favorite" f
-       JOIN "Song" s ON f."songId" = s.id
-       WHERE f."userId" = $1
-       ORDER BY f."createdAt" DESC`,
-      [decoded.id]
-    );
+    const result = await pool.query(`
+      SELECT f.*, s.* FROM "Favorite" f
+      JOIN "Song" s ON f."songId" = s.id
+      WHERE f."userId" = $1
+      ORDER BY f."createdAt" DESC
+    `, [decoded.id]);
 
     res.json(result.rows);
   } catch (error) {
@@ -505,12 +501,11 @@ app.get('/api/playlists/my', async (req, res) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
 
-    const result = await pool.query(
-      `SELECT * FROM "Playlist"
-       WHERE "userId" = $1
-       ORDER BY "createdAt" DESC`,
-      [decoded.id]
-    );
+    const result = await pool.query(`
+      SELECT * FROM "Playlist"
+      WHERE "userId" = $1
+      ORDER BY "createdAt" DESC
+    `, [decoded.id]);
 
     res.json(result.rows);
   } catch (error) {
@@ -535,12 +530,11 @@ app.post('/api/playlists', async (req, res) => {
       return res.status(400).json({ error: 'Nom requis' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO "Playlist" (name, description, "isPublic", "userId", "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, NOW(), NOW())
-       RETURNING *`,
-      [name, description || '', isPublic !== false, decoded.id]
-    );
+    const result = await pool.query(`
+      INSERT INTO "Playlist" (name, description, "isPublic", "userId", "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, NOW(), NOW())
+      RETURNING *
+    `, [name, description || '', isPublic !== false, decoded.id]);
 
     res.json({ success: true, playlist: result.rows[0] });
   } catch (error) {
@@ -627,13 +621,12 @@ app.get('/api/notifications', async (req, res) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
 
-    const result = await pool.query(
-      `SELECT * FROM "Notification"
-       WHERE "userId" = $1
-       ORDER BY "createdAt" DESC
-       LIMIT 20`,
-      [decoded.id]
-    );
+    const result = await pool.query(`
+      SELECT * FROM "Notification"
+      WHERE "userId" = $1
+      ORDER BY "createdAt" DESC
+      LIMIT 20
+    `, [decoded.id]);
 
     res.json(result.rows);
   } catch (error) {
@@ -655,8 +648,7 @@ app.post('/api/notifications/read', async (req, res) => {
     const { notificationId } = req.body;
 
     await pool.query(
-      `UPDATE "Notification" SET read = true
-       WHERE id = $1 AND "userId" = $2`,
+      'UPDATE "Notification" SET read = true WHERE id = $1 AND "userId" = $2',
       [notificationId, decoded.id]
     );
 
@@ -677,13 +669,12 @@ app.get('/api/comments', async (req, res) => {
       return res.status(400).json({ error: 'SongId requis' });
     }
 
-    const result = await pool.query(
-      `SELECT c.*, u.name, u.email FROM "Comment" c
-       JOIN "User" u ON c."userId" = u.id
-       WHERE c."songId" = $1
-       ORDER BY c."createdAt" DESC`,
-      [parseInt(songId)]
-    );
+    const result = await pool.query(`
+      SELECT c.*, u.name, u.email FROM "Comment" c
+      JOIN "User" u ON c."userId" = u.id
+      WHERE c."songId" = $1
+      ORDER BY c."createdAt" DESC
+    `, [parseInt(songId)]);
 
     res.json(result.rows);
   } catch (error) {
@@ -707,12 +698,11 @@ app.post('/api/comments', async (req, res) => {
       return res.status(400).json({ error: 'SongId et contenu requis' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO "Comment" (content, "userId", "songId", "parentId", "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, NOW(), NOW())
-       RETURNING *`,
-      [content, decoded.id, parseInt(songId), parentId || null]
-    );
+    const result = await pool.query(`
+      INSERT INTO "Comment" (content, "userId", "songId", "parentId", "createdAt", "updatedAt")
+      VALUES ($1, $2, $3, $4, NOW(), NOW())
+      RETURNING *
+    `, [content, decoded.id, parseInt(songId), parentId || null]);
 
     const userResult = await pool.query(
       'SELECT name, email FROM "User" WHERE id = $1',
@@ -739,13 +729,13 @@ app.post('/api/comments', async (req, res) => {
 // Récupérer les musiques en attente (admin)
 app.get('/api/admin/songs/pending', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT s.*, u.name as "artistName", u.id as "artistId"
-       FROM "Song" s
-       LEFT JOIN "User" u ON s."artistId" = u.id
-       WHERE s.status = 'PENDING'
-       ORDER BY s."createdAt" DESC`
-    );
+    const result = await pool.query(`
+      SELECT s.*, u.name as "artistName", u.id as "artistId"
+      FROM "Song" s
+      LEFT JOIN "User" u ON s."artistId" = u.id
+      WHERE s.status = 'PENDING'
+      ORDER BY s."createdAt" DESC
+    `);
     res.json(result.rows);
   } catch (error) {
     console.error('Erreur récupération musiques en attente:', error);
@@ -758,7 +748,7 @@ app.post('/api/admin/songs/:id/approve', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await pool.query(
-      `UPDATE "Song" SET status = 'ACCEPTED', "isVerified" = true WHERE id = $1`,
+      'UPDATE "Song" SET status = \'ACCEPTED\', "isVerified" = true WHERE id = $1',
       [id]
     );
     res.json({ success: true, message: 'Musique approuvée' });
@@ -773,7 +763,7 @@ app.post('/api/admin/songs/:id/reject', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     await pool.query(
-      `UPDATE "Song" SET status = 'REJECTED' WHERE id = $1`,
+      'UPDATE "Song" SET status = \'REJECTED\' WHERE id = $1',
       [id]
     );
     res.json({ success: true, message: 'Musique refusée' });
