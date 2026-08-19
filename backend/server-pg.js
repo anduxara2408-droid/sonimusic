@@ -51,7 +51,11 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/api/health',
       login: '/api/auth/login',
-      register: '/api/auth/register'
+      register: '/api/auth/register',
+      me: '/api/auth/me',
+      favorites: '/api/favorites/my-favorites',
+      playlists: '/api/playlists/my',
+      notifications: '/api/notifications'
     }
   });
 });
@@ -65,7 +69,6 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, name, password, role, artistName, bio, country } = req.body;
 
-    // Vérifier si l'utilisateur existe déjà
     const existing = await pool.query('SELECT * FROM "User" WHERE email = $1', [email]);
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'Cet email est déjà utilisé' });
@@ -175,6 +178,315 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 // Réinitialiser le mot de passe
 app.post('/api/auth/reset-password', async (req, res) => {
   res.json({ success: true, message: 'Fonctionnalité à venir' });
+});
+
+// ============================================================
+// ROUTES FAVORIS
+// ============================================================
+app.get('/api/favorites/my-favorites', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
+
+    const result = await pool.query(
+      `SELECT f.*, s.* FROM "Favorite" f
+       JOIN "Song" s ON f."songId" = s.id
+       WHERE f."userId" = $1
+       ORDER BY f."createdAt" DESC`,
+      [decoded.id]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur favoris:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des favoris' });
+  }
+});
+
+// Ajouter/Retirer un favori
+app.post('/api/favorites/toggle', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
+    const { songId } = req.body;
+
+    // Vérifier si déjà en favori
+    const existing = await pool.query(
+      'SELECT * FROM "Favorite" WHERE "userId" = $1 AND "songId" = $2',
+      [decoded.id, songId]
+    );
+
+    if (existing.rows.length > 0) {
+      // Supprimer le favori
+      await pool.query(
+        'DELETE FROM "Favorite" WHERE "userId" = $1 AND "songId" = $2',
+        [decoded.id, songId]
+      );
+      res.json({ liked: false, message: 'Retiré des favoris' });
+    } else {
+      // Ajouter le favori
+      await pool.query(
+        'INSERT INTO "Favorite" ("userId", "songId", "createdAt") VALUES ($1, $2, NOW())',
+        [decoded.id, songId]
+      );
+      res.json({ liked: true, message: 'Ajouté aux favoris' });
+    }
+  } catch (error) {
+    console.error('Erreur toggle favori:', error);
+    res.status(500).json({ error: 'Erreur lors du toggle du favori' });
+  }
+});
+
+// ============================================================
+// ROUTES PLAYLISTS
+// ============================================================
+app.get('/api/playlists/my', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
+
+    const result = await pool.query(
+      `SELECT * FROM "Playlist"
+       WHERE "userId" = $1
+       ORDER BY "createdAt" DESC`,
+      [decoded.id]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur playlists:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des playlists' });
+  }
+});
+
+// Créer une playlist
+app.post('/api/playlists', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
+    const { name, description, isPublic } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Nom requis' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO "Playlist" (name, description, "isPublic", "userId", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, NOW(), NOW())
+       RETURNING *`,
+      [name, description || '', isPublic !== false, decoded.id]
+    );
+
+    res.json({ success: true, playlist: result.rows[0] });
+  } catch (error) {
+    console.error('Erreur création playlist:', error);
+    res.status(500).json({ error: 'Erreur lors de la création de la playlist' });
+  }
+});
+
+// Ajouter une musique à une playlist
+app.post('/api/playlists/:id/add-song', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
+    const playlistId = parseInt(req.params.id);
+    const { songId } = req.body;
+
+    // Vérifier que la playlist appartient à l'utilisateur
+    const playlistCheck = await pool.query(
+      'SELECT * FROM "Playlist" WHERE id = $1 AND "userId" = $2',
+      [playlistId, decoded.id]
+    );
+
+    if (playlistCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Playlist non trouvée' });
+    }
+
+    // Vérifier si déjà dans la playlist
+    const existing = await pool.query(
+      'SELECT * FROM "PlaylistSong" WHERE "playlistId" = $1 AND "songId" = $2',
+      [playlistId, songId]
+    );
+
+    if (existing.rows.length === 0) {
+      await pool.query(
+        'INSERT INTO "PlaylistSong" ("playlistId", "songId", "addedAt") VALUES ($1, $2, NOW())',
+        [playlistId, songId]
+      );
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur ajout à playlist:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'ajout à la playlist' });
+  }
+});
+
+// Supprimer une playlist
+app.delete('/api/playlists/:id', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
+    const playlistId = parseInt(req.params.id);
+
+    await pool.query(
+      'DELETE FROM "Playlist" WHERE id = $1 AND "userId" = $2',
+      [playlistId, decoded.id]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur suppression playlist:', error);
+    res.status(500).json({ error: 'Erreur lors de la suppression de la playlist' });
+  }
+});
+
+// ============================================================
+// ROUTES NOTIFICATIONS
+// ============================================================
+app.get('/api/notifications', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
+
+    const result = await pool.query(
+      `SELECT * FROM "Notification"
+       WHERE "userId" = $1
+       ORDER BY "createdAt" DESC
+       LIMIT 20`,
+      [decoded.id]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur notifications:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des notifications' });
+  }
+});
+
+// Marquer une notification comme lue
+app.post('/api/notifications/read', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
+    const { notificationId } = req.body;
+
+    await pool.query(
+      `UPDATE "Notification" SET read = true
+       WHERE id = $1 AND "userId" = $2`,
+      [notificationId, decoded.id]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Erreur lecture notification:', error);
+    res.status(500).json({ error: 'Erreur lors du marquage de la notification' });
+  }
+});
+
+// ============================================================
+// ROUTES COMMENTAIRES
+// ============================================================
+app.get('/api/comments', async (req, res) => {
+  try {
+    const { songId } = req.query;
+    if (!songId) {
+      return res.status(400).json({ error: 'SongId requis' });
+    }
+
+    const result = await pool.query(
+      `SELECT c.*, u.name, u.email FROM "Comment" c
+       JOIN "User" u ON c."userId" = u.id
+       WHERE c."songId" = $1
+       ORDER BY c."createdAt" DESC`,
+      [parseInt(songId)]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur commentaires:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des commentaires' });
+  }
+});
+
+app.post('/api/comments', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
+    const { songId, content, parentId } = req.body;
+
+    if (!songId || !content) {
+      return res.status(400).json({ error: 'SongId et contenu requis' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO "Comment" (content, "userId", "songId", "parentId", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, NOW(), NOW())
+       RETURNING *`,
+      [content, decoded.id, parseInt(songId), parentId || null]
+    );
+
+    const userResult = await pool.query(
+      'SELECT name, email FROM "User" WHERE id = $1',
+      [decoded.id]
+    );
+
+    res.json({
+      success: true,
+      comment: {
+        ...result.rows[0],
+        user: userResult.rows[0] || { name: 'Utilisateur' }
+      }
+    });
+  } catch (error) {
+    console.error('Erreur ajout commentaire:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'ajout du commentaire' });
+  }
 });
 
 // ============================================================
