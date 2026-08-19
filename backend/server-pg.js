@@ -336,13 +336,13 @@ app.get('/api/songs/:id', async (req, res) => {
 // ROUTES ARTISTES
 // ============================================================
 
-// Récupérer tous les artistes
+// Récupérer tous les artistes (exclure l'admin)
 app.get('/api/artists', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT id, name, "artistName", bio, country, "profilePic"
       FROM "User"
-      WHERE role = 'ARTIST' OR role = 'ADMIN'
+      WHERE role = 'ARTIST'
       ORDER BY name
     `);
     res.json(result.rows);
@@ -360,7 +360,7 @@ app.get('/api/artists/:id', async (req, res) => {
     const artistResult = await pool.query(`
       SELECT id, name, "artistName", bio, country, "profilePic"
       FROM "User"
-      WHERE id = $1 AND (role = 'ARTIST' OR role = 'ADMIN')
+      WHERE id = $1 AND role = 'ARTIST'
     `, [id]);
     
     if (artistResult.rows.length === 0) {
