@@ -660,7 +660,7 @@ app.post('/api/notifications/read', async (req, res) => {
 });
 
 // ============================================================
-// ROUTES COMMENTAIRES (COMPLET)
+// ROUTES COMMENTAIRES
 // ============================================================
 
 // Récupérer les commentaires avec infos utilisateur

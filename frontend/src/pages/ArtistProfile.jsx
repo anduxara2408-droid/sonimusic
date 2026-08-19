@@ -26,7 +26,6 @@ function ArtistProfile() {
   useEffect(() => {
     const fetchArtist = async () => {
       try {
-        // Convertir l'ID en nombre
         const artistId = parseInt(id);
         if (isNaN(artistId)) {
           setError('ID d\'artiste invalide');
