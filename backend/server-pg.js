@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import pkg from 'pg';
 const { Pool } = pkg;
 
@@ -12,6 +14,17 @@ const PORT = process.env.PORT || 5000;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
+});
+
+// Configuration email
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || 'smtp-fr.securemail.pro',
+  port: parseInt(process.env.EMAIL_PORT) || 465,
+  secure: true,
+  auth: {
+    user: process.env.EMAIL_USER || 'noreply@sonimusic.online',
+    pass: process.env.EMAIL_PASS || 'Nore@SOniMUSIC.online'
+  }
 });
 
 app.use(cors({
@@ -53,9 +66,12 @@ app.get('/', (req, res) => {
       login: '/api/auth/login',
       register: '/api/auth/register',
       me: '/api/auth/me',
+      forgotPassword: '/api/auth/forgot-password',
+      resetPassword: '/api/auth/reset-password',
       favorites: '/api/favorites/my-favorites',
       playlists: '/api/playlists/my',
-      notifications: '/api/notifications'
+      notifications: '/api/notifications',
+      comments: '/api/comments'
     }
   });
 });
@@ -170,14 +186,114 @@ app.get('/api/auth/me', async (req, res) => {
   }
 });
 
-// Mot de passe oublié
+// ============================================================
+// MOT DE PASSE OUBLIÉ
+// ============================================================
+
+// 1. Demander la réinitialisation
 app.post('/api/auth/forgot-password', async (req, res) => {
-  res.json({ success: true, message: 'Fonctionnalité à venir' });
+  try {
+    const { email } = req.body;
+
+    // Vérifier si l'utilisateur existe
+    const userResult = await pool.query('SELECT * FROM "User" WHERE email = $1', [email]);
+
+    if (userResult.rows.length === 0) {
+      // Pour des raisons de sécurité, on ne révèle pas si l'email existe
+      return res.json({ 
+        success: true, 
+        message: 'Si un compte existe avec cet email, un lien de réinitialisation vous a été envoyé.' 
+      });
+    }
+
+    const user = userResult.rows[0];
+
+    // Générer un token de réinitialisation
+    const resetToken = crypto.randomUUID();
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 heure
+
+    // Sauvegarder le token dans la base de données
+    await pool.query(
+      `UPDATE "User" 
+       SET "resetToken" = $1, "resetTokenExpiry" = $2 
+       WHERE id = $3`,
+      [resetToken, resetTokenExpiry, user.id]
+    );
+
+    // Construire le lien de réinitialisation
+    const resetUrl = `${process.env.FRONTEND_URL || 'https://sonimusic.online'}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+
+    // Envoyer l'email
+    await transporter.sendMail({
+      from: `"SONIMUSIC" <${process.env.EMAIL_USER || 'noreply@sonimusic.online'}>`,
+      to: email,
+      subject: '🔑 Réinitialisation de votre mot de passe SONIMUSIC',
+      html: `
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; background-color: #0c0b0a; color: white;">
+          <h1 style="color: #d4af37;">🔑 SONIMUSIC</h1>
+          <h2>Réinitialisation de mot de passe</h2>
+          <p>Vous avez demandé à réinitialiser votre mot de passe.</p>
+          <p>Cliquez sur le bouton ci-dessous :</p>
+          <a href="${resetUrl}" style="display:inline-block;padding:12px 30px;background:#d4af37;color:black;text-decoration:none;border-radius:5px;margin:20px 0;">
+            🔐 Réinitialiser mon mot de passe
+          </a>
+          <p style="color:#666;font-size:12px;">⏳ Ce lien expire dans 1 heure.</p>
+          <p style="color:#666;font-size:12px;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+        </div>
+      `
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Un email de réinitialisation vous a été envoyé.' 
+    });
+
+  } catch (error) {
+    console.error('Erreur forgot-password:', error);
+    res.status(500).json({ error: 'Erreur lors de la réinitialisation' });
+  }
 });
 
-// Réinitialiser le mot de passe
+// 2. Réinitialiser le mot de passe
 app.post('/api/auth/reset-password', async (req, res) => {
-  res.json({ success: true, message: 'Fonctionnalité à venir' });
+  try {
+    const { email, token, newPassword } = req.body;
+
+    // Vérifier le token
+    const userResult = await pool.query(
+      `SELECT * FROM "User" 
+       WHERE email = $1 
+         AND "resetToken" = $2 
+         AND "resetTokenExpiry" > NOW()`,
+      [email, token]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(400).json({ error: 'Token invalide ou expiré' });
+    }
+
+    const user = userResult.rows[0];
+
+    // Hacher le nouveau mot de passe
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Mettre à jour le mot de passe et supprimer le token
+    await pool.query(
+      `UPDATE "User" 
+       SET password = $1, "resetToken" = NULL, "resetTokenExpiry" = NULL 
+       WHERE id = $2`,
+      [hashedPassword, user.id]
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Mot de passe réinitialisé avec succès !' 
+    });
+
+  } catch (error) {
+    console.error('Erreur reset-password:', error);
+    res.status(500).json({ error: 'Erreur lors de la réinitialisation' });
+  }
 });
 
 // ============================================================
@@ -220,21 +336,18 @@ app.post('/api/favorites/toggle', async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
     const { songId } = req.body;
 
-    // Vérifier si déjà en favori
     const existing = await pool.query(
       'SELECT * FROM "Favorite" WHERE "userId" = $1 AND "songId" = $2',
       [decoded.id, songId]
     );
 
     if (existing.rows.length > 0) {
-      // Supprimer le favori
       await pool.query(
         'DELETE FROM "Favorite" WHERE "userId" = $1 AND "songId" = $2',
         [decoded.id, songId]
       );
       res.json({ liked: false, message: 'Retiré des favoris' });
     } else {
-      // Ajouter le favori
       await pool.query(
         'INSERT INTO "Favorite" ("userId", "songId", "createdAt") VALUES ($1, $2, NOW())',
         [decoded.id, songId]
@@ -317,7 +430,6 @@ app.post('/api/playlists/:id/add-song', async (req, res) => {
     const playlistId = parseInt(req.params.id);
     const { songId } = req.body;
 
-    // Vérifier que la playlist appartient à l'utilisateur
     const playlistCheck = await pool.query(
       'SELECT * FROM "Playlist" WHERE id = $1 AND "userId" = $2',
       [playlistId, decoded.id]
@@ -327,7 +439,6 @@ app.post('/api/playlists/:id/add-song', async (req, res) => {
       return res.status(404).json({ error: 'Playlist non trouvée' });
     }
 
-    // Vérifier si déjà dans la playlist
     const existing = await pool.query(
       'SELECT * FROM "PlaylistSong" WHERE "playlistId" = $1 AND "songId" = $2',
       [playlistId, songId]
