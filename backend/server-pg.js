@@ -348,7 +348,7 @@ app.get('/api/artists', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('❌ Erreur récupération artistes:', error);
-    res.status(500).json({ error: 'Erreur lors de la récupération des artistes', details: error.message });
+    res.status(500).json({ error: 'Erreur lors de la récupération des artistes' });
   }
 });
 
