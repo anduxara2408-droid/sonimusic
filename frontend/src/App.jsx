@@ -38,6 +38,8 @@ import Cgu from './pages/Cgu';
 import Mentions from './pages/Mentions';
 import Artists from './pages/Artists';
 import Contact from './pages/Contact';
+import UserProfile from './pages/UserProfile';
+import EditProfile from './pages/EditProfile';
 
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -81,7 +83,6 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Routes publiques */}
             <Route path="/" element={<Layout><Home /></Layout>} />
             <Route path="/register" element={<Layout><Register /></Layout>} />
             <Route path="/login" element={<Layout><Login /></Layout>} />
@@ -102,150 +103,26 @@ function App() {
             <Route path="/mentions" element={<Layout><Mentions /></Layout>} />
             <Route path="/artists" element={<Layout><Artists /></Layout>} />
             <Route path="/contact" element={<Layout><Contact /></Layout>} />
+            <Route path="/user/:id" element={<Layout><UserProfile /></Layout>} />
             
-            {/* Routes privées utilisateur */}
-            <Route 
-              path="/dashboard" 
-              element={
-                <PrivateRoute>
-                  <Layout><Dashboard /></Layout>
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/add-song" 
-              element={
-                <PrivateRoute>
-                  <Layout><AddSong /></Layout>
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/my-songs" 
-              element={
-                <PrivateRoute>
-                  <Layout><MySongs /></Layout>
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/favorites" 
-              element={
-                <PrivateRoute>
-                  <Layout><LikedSongs /></Layout>
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/playlists" 
-              element={
-                <PrivateRoute>
-                  <Layout><Playlists /></Layout>
-                </PrivateRoute>
-              } 
-            />
-            <Route 
-              path="/library" 
-              element={
-                <PrivateRoute>
-                  <Layout><Library /></Layout>
-                </PrivateRoute>
-              } 
-            />
+            <Route path="/dashboard" element={<PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>} />
+            <Route path="/edit-profile" element={<PrivateRoute><Layout><EditProfile /></Layout></PrivateRoute>} />
+            <Route path="/add-song" element={<PrivateRoute><Layout><AddSong /></Layout></PrivateRoute>} />
+            <Route path="/my-songs" element={<PrivateRoute><Layout><MySongs /></Layout></PrivateRoute>} />
+            <Route path="/favorites" element={<PrivateRoute><Layout><LikedSongs /></Layout></PrivateRoute>} />
+            <Route path="/playlists" element={<PrivateRoute><Layout><Playlists /></Layout></PrivateRoute>} />
+            <Route path="/library" element={<PrivateRoute><Layout><Library /></Layout></PrivateRoute>} />
+            <Route path="/artist-dashboard" element={<PrivateRoute><Layout><ArtistDashboard /></Layout></PrivateRoute>} />
             
-            {/* Route Dashboard Artiste */}
-            <Route 
-              path="/artist-dashboard" 
-              element={
-                <PrivateRoute>
-                  <Layout><ArtistDashboard /></Layout>
-                </PrivateRoute>
-              } 
-            />
+            <Route path="/admin" element={<AdminRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/upload" element={<AdminRoute><AdminLayout><AdminUpload /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/songs" element={<AdminRoute><AdminLayout><AdminSongs /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/artists" element={<AdminRoute><AdminLayout><AdminArtists /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/add-song" element={<AdminRoute><AdminLayout><AdminAddSong /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/add-artist" element={<AdminRoute><AdminLayout><AdminAddArtist /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/albums" element={<AdminRoute><AdminLayout><AdminAlbums /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/users" element={<AdminRoute><AdminLayout><AdminUsers /></AdminLayout></AdminRoute>} />
             
-            {/* Routes Admin */}
-            <Route 
-              path="/admin" 
-              element={
-                <AdminRoute>
-                  <AdminLayout>
-                    <AdminDashboard />
-                  </AdminLayout>
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/upload" 
-              element={
-                <AdminRoute>
-                  <AdminLayout>
-                    <AdminUpload />
-                  </AdminLayout>
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/songs" 
-              element={
-                <AdminRoute>
-                  <AdminLayout>
-                    <AdminSongs />
-                  </AdminLayout>
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/artists" 
-              element={
-                <AdminRoute>
-                  <AdminLayout>
-                    <AdminArtists />
-                  </AdminLayout>
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/add-song" 
-              element={
-                <AdminRoute>
-                  <AdminLayout>
-                    <AdminAddSong />
-                  </AdminLayout>
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/add-artist" 
-              element={
-                <AdminRoute>
-                  <AdminLayout>
-                    <AdminAddArtist />
-                  </AdminLayout>
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/albums" 
-              element={
-                <AdminRoute>
-                  <AdminLayout>
-                    <AdminAlbums />
-                  </AdminLayout>
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin/users" 
-              element={
-                <AdminRoute>
-                  <AdminLayout>
-                    <AdminUsers />
-                  </AdminLayout>
-                </AdminRoute>
-              } 
-            />
-            
-            {/* Route 404 */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </BrowserRouter>

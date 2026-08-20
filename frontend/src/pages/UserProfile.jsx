@@ -84,7 +84,7 @@ const UserProfile = () => {
               className="w-24 h-24 rounded-full object-cover border-4 border-orange-500/30"
               onError={(e) => { e.target.src = '/images/artists/default.jpg'; }}
             />
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold text-white">{profileUser.name}</h1>
               {profileUser.artistName && (
                 <p className="text-orange-400 text-sm">{profileUser.artistName}</p>
@@ -94,9 +94,17 @@ const UserProfile = () => {
                  profileUser.role === 'ARTIST' ? 'Artiste' : 'Auditeur'}
               </p>
               {isOwnProfile && (
-                <span className="inline-block mt-2 text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">
-                  C'est vous !
-                </span>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <span className="inline-block text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded-full">
+                    C'est vous !
+                  </span>
+                  <Link 
+                    to="/edit-profile" 
+                    className="inline-block bg-orange-500 text-black px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-orange-400 transition-colors"
+                  >
+                    ✏️ Modifier mon profil
+                  </Link>
+                </div>
               )}
             </div>
           </div>
