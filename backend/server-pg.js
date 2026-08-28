@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import pkg from 'pg';
 const { Pool } = pkg;
 
@@ -16,7 +17,10 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Configuration email
+// Configuration Resend (email moderne et fiable)
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Ancienne configuration nodemailer (gardée pour compatibilité, mais non utilisée)
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp-fr.securemail.pro',
   port: parseInt(process.env.EMAIL_PORT) || 465,
@@ -121,6 +125,56 @@ app.post('/api/auth/register', async (req, res) => {
       process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789',
       { expiresIn: '7d' }
     );
+
+    // ===== ENVOI DE L'EMAIL DE BIENVENUE AVEC RESEND =====
+    try {
+      const { data, error } = await resend.emails.send({
+        from: `SONIMUSIC <noreply@${process.env.EMAIL_DOMAIN || 'sonimusic.online'}>`,
+        to: [email],
+        subject: '🎵 Bienvenue sur SONIMUSIC !',
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Bienvenue sur SONIMUSIC</title>
+          </head>
+          <body style="font-family: Arial, sans-serif; background-color: #0c0b0a; color: #ffffff; padding: 20px; margin: 0;">
+            <div style="max-width: 600px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; padding: 40px; border: 1px solid #2a2a2a;">
+              <div style="text-align: center; border-bottom: 2px solid #d4af37; padding-bottom: 20px;">
+                <h1 style="color: #d4af37; font-size: 28px; margin: 0;">🎵 SONIMUSIC</h1>
+                <p style="color: #888; margin: 5px 0 0;">La musique Soninké à portée de clic</p>
+              </div>
+              <div style="padding: 30px 0;">
+                <p style="font-size: 16px; line-height: 1.6;">Bonjour <strong style="color: #d4af37;">${name}</strong>,</p>
+                <p style="font-size: 16px; line-height: 1.6; color: #ccc;">Bienvenue sur <strong style="color: #d4af37;">SONIMUSIC</strong> !</p>
+                <p style="font-size: 16px; line-height: 1.6; color: #ccc;">Votre compte a été créé avec succès. Vous pouvez maintenant écouter, commenter et partager la musique Soninké.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${process.env.FRONTEND_URL || 'https://sonimusic.online'}" style="display: inline-block; padding: 14px 40px; background: #d4af37; color: #000000; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px;">
+                    🎵 Découvrir SONIMUSIC
+                  </a>
+                </div>
+              </div>
+              <div style="border-top: 1px solid #333; padding-top: 20px; text-align: center; color: #666; font-size: 12px;">
+                <p>© 2026 SONIMUSIC - Tous droits réservés</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `
+      });
+
+      if (error) {
+        console.error('❌ Erreur Resend (bienvenue):', error);
+      } else {
+        console.log('✅ Email de bienvenue envoyé à:', email);
+        console.log('📧 Message ID:', data?.id);
+      }
+    } catch (emailError) {
+      console.error('⚠️ Erreur envoi email de bienvenue:', emailError.message);
+    }
+
     res.status(201).json({ success: true, message: 'Inscription réussie !', token, user: result.rows[0] });
   } catch (error) {
     console.error('Erreur inscription:', error);
@@ -178,7 +232,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 });
 
 // ============================================================
-// MOT DE PASSE OUBLIÉ - AVEC EMAIL + MODE DEBUG
+// MOT DE PASSE OUBLIÉ AVEC RESEND
 // ============================================================
 
 app.post('/api/auth/forgot-password', async (req, res) => {
@@ -217,46 +271,41 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     console.log('🔗 Lien:', resetUrl);
     console.log('='.repeat(60));
 
-    // ===== ENVOI DE L'EMAIL =====
+    // ===== ENVOI DE L'EMAIL AVEC RESEND =====
     let emailSent = false;
-    let emailError = null;
 
     try {
-      const info = await transporter.sendMail({
-        from: `"SONIMUSIC" <${process.env.EMAIL_USER || 'noreply@sonimusic.online'}>`,
-        to: email,
+      const { data, error } = await resend.emails.send({
+        from: `SONIMUSIC <noreply@${process.env.EMAIL_DOMAIN || 'sonimusic.online'}>`,
+        to: [email],
         subject: '🔑 Réinitialisation de votre mot de passe SONIMUSIC',
         html: `
           <!DOCTYPE html>
           <html>
           <head>
-            <style>
-              body { font-family: Arial, sans-serif; background-color: #0c0b0a; color: #ffffff; padding: 20px; }
-              .container { max-width: 600px; margin: 0 auto; background: #1a1a1a; border-radius: 10px; padding: 30px; }
-              .header { text-align: center; border-bottom: 2px solid #d4af37; padding-bottom: 20px; }
-              .header h1 { color: #d4af37; margin: 0; }
-              .content { padding: 20px 0; }
-              .button { display: inline-block; padding: 12px 30px; background: #d4af37; color: #000; text-decoration: none; border-radius: 5px; font-weight: bold; }
-              .footer { text-align: center; color: #666; font-size: 12px; border-top: 1px solid #333; padding-top: 20px; margin-top: 20px; }
-            </style>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Réinitialisation de mot de passe</title>
           </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>🎵 SONIMUSIC</h1>
-                <p>Réinitialisation de mot de passe</p>
+          <body style="font-family: Arial, sans-serif; background-color: #0c0b0a; color: #ffffff; padding: 20px; margin: 0;">
+            <div style="max-width: 600px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; padding: 40px; border: 1px solid #2a2a2a;">
+              <div style="text-align: center; border-bottom: 2px solid #d4af37; padding-bottom: 20px;">
+                <h1 style="color: #d4af37; font-size: 28px; margin: 0;">🎵 SONIMUSIC</h1>
+                <p style="color: #888; margin: 5px 0 0;">La musique Soninké à portée de clic</p>
               </div>
-              <div class="content">
-                <p>Bonjour <strong>${user.name || 'utilisateur'}</strong>,</p>
-                <p>Vous avez demandé à réinitialiser votre mot de passe pour votre compte SONIMUSIC.</p>
-                <p>Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe :</p>
+              <div style="padding: 30px 0;">
+                <p style="font-size: 16px; line-height: 1.6;">Bonjour <strong style="color: #d4af37;">${user.name || 'utilisateur'}</strong>,</p>
+                <p style="font-size: 16px; line-height: 1.6; color: #ccc;">Vous avez demandé à réinitialiser votre mot de passe pour votre compte SONIMUSIC.</p>
+                <p style="font-size: 16px; line-height: 1.6; color: #ccc;">Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe :</p>
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${resetUrl}" class="button">🔐 Réinitialiser mon mot de passe</a>
+                  <a href="${resetUrl}" style="display: inline-block; padding: 14px 40px; background: #d4af37; color: #000000; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px;">
+                    🔐 Réinitialiser mon mot de passe
+                  </a>
                 </div>
-                <p style="color: #888; font-size: 14px;">⏳ Ce lien est valable pendant <strong>1 heure</strong>.</p>
+                <p style="color: #888; font-size: 14px;">⏳ Ce lien est valable pendant <strong style="color: #d4af37;">1 heure</strong>.</p>
                 <p style="color: #888; font-size: 14px;">🔒 Si vous n'avez pas demandé cette réinitialisation, ignorez simplement cet email.</p>
               </div>
-              <div class="footer">
+              <div style="border-top: 1px solid #333; padding-top: 20px; text-align: center; color: #666; font-size: 12px;">
                 <p>© 2026 SONIMUSIC - Tous droits réservés</p>
                 <p>Cet email a été envoyé à ${email}</p>
               </div>
@@ -265,12 +314,18 @@ app.post('/api/auth/forgot-password', async (req, res) => {
           </html>
         `
       });
+
+      if (error) {
+        console.error('❌ Erreur Resend:', error);
+        throw error;
+      }
+
       emailSent = true;
       console.log('✅ Email envoyé avec succès à:', email);
-      console.log('📧 Message ID:', info.messageId);
+      console.log('📧 Message ID:', data?.id);
+
     } catch (error) {
       console.error('❌ Erreur envoi email:', error.message);
-      emailError = error.message;
     }
 
     res.json({
@@ -278,9 +333,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       message: 'Un email de réinitialisation vous a été envoyé.',
       emailSent: emailSent,
       debug: {
-        link: resetUrl,
-        emailSent: emailSent,
-        emailError: emailError
+        link: resetUrl
       }
     });
 
@@ -717,7 +770,7 @@ app.post('/api/admin/songs/:id/reject', authenticateToken, isAdmin, async (req, 
 // ============================================================
 app.listen(PORT, () => {
   console.log('='.repeat(60));
-  console.log('🎵 SONIMUSIC API - Version 2.0');
+  console.log('🎵 SONIMUSIC API - Version 2.0 (avec Resend)');
   console.log('='.repeat(60));
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Health check: /api/health`);
@@ -726,6 +779,7 @@ app.listen(PORT, () => {
   console.log(`🎤 Artists: /api/artists`);
   console.log(`💬 Comments: /api/comments`);
   console.log(`📸 Profile: /api/users/profile`);
+  console.log(`📧 Email: Resend (${process.env.RESEND_API_KEY ? '✅ Configuré' : '❌ Non configuré'})`);
   console.log('='.repeat(60));
 });
 
