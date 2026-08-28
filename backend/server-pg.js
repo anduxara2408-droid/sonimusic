@@ -16,7 +16,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Configuration email
+// Configuration email (gardée pour compatibilité)
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp-fr.securemail.pro',
   port: parseInt(process.env.EMAIL_PORT) || 465,
@@ -178,7 +178,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 });
 
 // ============================================================
-// MOT DE PASSE OUBLIÉ (VERSION DEBUG)
+// MOT DE PASSE OUBLIÉ - MODE DEBUG (SANS EMAIL)
 // ============================================================
 
 app.post('/api/auth/forgot-password', async (req, res) => {
@@ -217,49 +217,18 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     console.log('🔗 Lien:', resetUrl);
     console.log('='.repeat(60));
 
-    let emailSent = false;
-    try {
-      await transporter.sendMail({
-        from: `"SONIMUSIC" <${process.env.EMAIL_USER || 'noreply@sonimusic.online'}>`,
-        to: email,
-        subject: '🔑 Réinitialisation de votre mot de passe SONIMUSIC',
-        html: `
-          <div style="max-width:600px;padding:20px;font-family:Arial;background:#0c0b0a;color:white;border-radius:10px;">
-            <h1 style="color:#d4af37;">🔑 SONIMUSIC</h1>
-            <h2>Réinitialisation de mot de passe</h2>
-            <p>Bonjour <strong>${user.name || 'utilisateur'}</strong>,</p>
-            <p>Vous avez demandé à réinitialiser votre mot de passe.</p>
-            <p>Cliquez sur le lien ci-dessous :</p>
-            <a href="${resetUrl}" style="display:inline-block;padding:12px 30px;background:#d4af37;color:black;text-decoration:none;border-radius:5px;margin:20px 0;">
-              🔐 Réinitialiser
-            </a>
-            <p style="color:#666;font-size:12px;">⏳ Ce lien expire dans 1 heure.</p>
-            <p style="color:#666;font-size:12px;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
-            <hr style="border-color:#333;">
-            <p style="color:#666;font-size:12px;">© 2026 SONIMUSIC</p>
-          </div>
-        `
-      });
-      emailSent = true;
-      console.log('✅ Email envoyé à:', email);
-    } catch (emailError) {
-      console.log('⚠️ L\'email n\'a pas été envoyé (mode debug):', emailError.message);
-    }
-
     res.json({ 
       success: true, 
       message: 'Si un compte existe avec cet email, un lien de réinitialisation vous a été envoyé.',
       debug: {
-        link: resetUrl,
-        emailSent: emailSent
+        link: resetUrl
       }
     });
 
   } catch (error) {
     console.error('❌ Erreur forgot-password:', error);
     res.status(500).json({ 
-      error: 'Erreur lors de la demande de réinitialisation',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: 'Erreur lors de la demande de réinitialisation'
     });
   }
 });
