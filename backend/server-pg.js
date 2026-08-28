@@ -178,33 +178,95 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 });
 
 // ============================================================
-// MOT DE PASSE OUBLIÉ
+// MOT DE PASSE OUBLIÉ (VERSION DEBUG)
 // ============================================================
 
 app.post('/api/auth/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
+    console.log('🔑 Demande de réinitialisation pour:', email);
+
     const userResult = await pool.query('SELECT * FROM "User" WHERE email = $1', [email]);
+
     if (userResult.rows.length === 0) {
-      return res.json({ success: true, message: 'Si un compte existe, un lien de réinitialisation vous a été envoyé.' });
+      console.log('⚠️ Email non trouvé:', email);
+      return res.json({ 
+        success: true, 
+        message: 'Si un compte existe avec cet email, un lien de réinitialisation vous a été envoyé.' 
+      });
     }
+
     const user = userResult.rows[0];
+    console.log('✅ Utilisateur trouvé:', user.email);
+
     const resetToken = crypto.randomUUID();
     const resetTokenExpiry = new Date(Date.now() + 3600000);
-    await pool.query(`UPDATE "User" SET "resetToken" = $1, "resetTokenExpiry" = $2 WHERE id = $3`, [resetToken, resetTokenExpiry, user.id]);
-    const resetUrl = `${process.env.FRONTEND_URL || 'https://sonimusic.online'}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
-    await transporter.sendMail({
-      from: `"SONIMUSIC" <${process.env.EMAIL_USER || 'noreply@sonimusic.online'}>`,
-      to: email,
-      subject: '🔑 Réinitialisation de votre mot de passe SONIMUSIC',
-      html: `<div style="max-width:600px;padding:20px;font-family:Arial;background-color:#0c0b0a;color:white;"><h1 style="color:#d4af37;">🔑 SONIMUSIC</h1><p>Cliquez sur le lien pour réinitialiser votre mot de passe :</p><a href="${resetUrl}" style="display:inline-block;padding:12px 30px;background:#d4af37;color:black;text-decoration:none;border-radius:5px;">🔐 Réinitialiser</a></div>`
+
+    await pool.query(
+      `UPDATE "User" SET "resetToken" = $1, "resetTokenExpiry" = $2 WHERE id = $3`,
+      [resetToken, resetTokenExpiry, user.id]
+    );
+    console.log('✅ Token sauvegardé en base');
+
+    const frontendUrl = process.env.FRONTEND_URL || 'https://sonimusic.online';
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+
+    console.log('='.repeat(60));
+    console.log('🔑 LIEN DE RÉINITIALISATION (MODE DEBUG)');
+    console.log('📧 Email:', email);
+    console.log('🔗 Lien:', resetUrl);
+    console.log('='.repeat(60));
+
+    let emailSent = false;
+    try {
+      await transporter.sendMail({
+        from: `"SONIMUSIC" <${process.env.EMAIL_USER || 'noreply@sonimusic.online'}>`,
+        to: email,
+        subject: '🔑 Réinitialisation de votre mot de passe SONIMUSIC',
+        html: `
+          <div style="max-width:600px;padding:20px;font-family:Arial;background:#0c0b0a;color:white;border-radius:10px;">
+            <h1 style="color:#d4af37;">🔑 SONIMUSIC</h1>
+            <h2>Réinitialisation de mot de passe</h2>
+            <p>Bonjour <strong>${user.name || 'utilisateur'}</strong>,</p>
+            <p>Vous avez demandé à réinitialiser votre mot de passe.</p>
+            <p>Cliquez sur le lien ci-dessous :</p>
+            <a href="${resetUrl}" style="display:inline-block;padding:12px 30px;background:#d4af37;color:black;text-decoration:none;border-radius:5px;margin:20px 0;">
+              🔐 Réinitialiser
+            </a>
+            <p style="color:#666;font-size:12px;">⏳ Ce lien expire dans 1 heure.</p>
+            <p style="color:#666;font-size:12px;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+            <hr style="border-color:#333;">
+            <p style="color:#666;font-size:12px;">© 2026 SONIMUSIC</p>
+          </div>
+        `
+      });
+      emailSent = true;
+      console.log('✅ Email envoyé à:', email);
+    } catch (emailError) {
+      console.log('⚠️ L\'email n\'a pas été envoyé (mode debug):', emailError.message);
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Si un compte existe avec cet email, un lien de réinitialisation vous a été envoyé.',
+      debug: {
+        link: resetUrl,
+        emailSent: emailSent
+      }
     });
-    res.json({ success: true, message: 'Un email de réinitialisation vous a été envoyé.' });
+
   } catch (error) {
-    console.error('Erreur forgot-password:', error);
-    res.status(500).json({ error: 'Erreur lors de la réinitialisation' });
+    console.error('❌ Erreur forgot-password:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la demande de réinitialisation',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
+
+// ============================================================
+// RÉINITIALISATION DU MOT DE PASSE
+// ============================================================
 
 app.post('/api/auth/reset-password', async (req, res) => {
   try {
