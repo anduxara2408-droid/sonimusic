@@ -16,7 +16,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Configuration email (gardée pour compatibilité)
+// Configuration email
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp-fr.securemail.pro',
   port: parseInt(process.env.EMAIL_PORT) || 465,
@@ -178,7 +178,7 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 });
 
 // ============================================================
-// MOT DE PASSE OUBLIÉ - MODE DEBUG (SANS EMAIL)
+// MOT DE PASSE OUBLIÉ - AVEC EMAIL + MODE DEBUG
 // ============================================================
 
 app.post('/api/auth/forgot-password', async (req, res) => {
@@ -190,9 +190,9 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
     if (userResult.rows.length === 0) {
       console.log('⚠️ Email non trouvé:', email);
-      return res.json({ 
-        success: true, 
-        message: 'Si un compte existe avec cet email, un lien de réinitialisation vous a été envoyé.' 
+      return res.json({
+        success: true,
+        message: 'Si un compte existe avec cet email, un lien de réinitialisation vous a été envoyé.'
       });
     }
 
@@ -212,22 +212,81 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
     console.log('='.repeat(60));
-    console.log('🔑 LIEN DE RÉINITIALISATION (MODE DEBUG)');
+    console.log('🔑 LIEN DE RÉINITIALISATION');
     console.log('📧 Email:', email);
     console.log('🔗 Lien:', resetUrl);
     console.log('='.repeat(60));
 
-    res.json({ 
-      success: true, 
-      message: 'Si un compte existe avec cet email, un lien de réinitialisation vous a été envoyé.',
+    // ===== ENVOI DE L'EMAIL =====
+    let emailSent = false;
+    let emailError = null;
+
+    try {
+      const info = await transporter.sendMail({
+        from: `"SONIMUSIC" <${process.env.EMAIL_USER || 'noreply@sonimusic.online'}>`,
+        to: email,
+        subject: '🔑 Réinitialisation de votre mot de passe SONIMUSIC',
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; background-color: #0c0b0a; color: #ffffff; padding: 20px; }
+              .container { max-width: 600px; margin: 0 auto; background: #1a1a1a; border-radius: 10px; padding: 30px; }
+              .header { text-align: center; border-bottom: 2px solid #d4af37; padding-bottom: 20px; }
+              .header h1 { color: #d4af37; margin: 0; }
+              .content { padding: 20px 0; }
+              .button { display: inline-block; padding: 12px 30px; background: #d4af37; color: #000; text-decoration: none; border-radius: 5px; font-weight: bold; }
+              .footer { text-align: center; color: #666; font-size: 12px; border-top: 1px solid #333; padding-top: 20px; margin-top: 20px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>🎵 SONIMUSIC</h1>
+                <p>Réinitialisation de mot de passe</p>
+              </div>
+              <div class="content">
+                <p>Bonjour <strong>${user.name || 'utilisateur'}</strong>,</p>
+                <p>Vous avez demandé à réinitialiser votre mot de passe pour votre compte SONIMUSIC.</p>
+                <p>Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe :</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${resetUrl}" class="button">🔐 Réinitialiser mon mot de passe</a>
+                </div>
+                <p style="color: #888; font-size: 14px;">⏳ Ce lien est valable pendant <strong>1 heure</strong>.</p>
+                <p style="color: #888; font-size: 14px;">🔒 Si vous n'avez pas demandé cette réinitialisation, ignorez simplement cet email.</p>
+              </div>
+              <div class="footer">
+                <p>© 2026 SONIMUSIC - Tous droits réservés</p>
+                <p>Cet email a été envoyé à ${email}</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `
+      });
+      emailSent = true;
+      console.log('✅ Email envoyé avec succès à:', email);
+      console.log('📧 Message ID:', info.messageId);
+    } catch (error) {
+      console.error('❌ Erreur envoi email:', error.message);
+      emailError = error.message;
+    }
+
+    res.json({
+      success: true,
+      message: 'Un email de réinitialisation vous a été envoyé.',
+      emailSent: emailSent,
       debug: {
-        link: resetUrl
+        link: resetUrl,
+        emailSent: emailSent,
+        emailError: emailError
       }
     });
 
   } catch (error) {
     console.error('❌ Erreur forgot-password:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Erreur lors de la demande de réinitialisation'
     });
   }
