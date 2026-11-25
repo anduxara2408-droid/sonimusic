@@ -1,5 +1,18 @@
 node_modules
+
 # Keep environment variables out of version control
 .env
+.env.*
+!.env.example
 
 /generated/prisma
+
+# Outils locaux / IA / Cloudflare
+.wrangler
+.claude
+.windsurf
+.agents
+
+# Fichiers audio volumineux et uploads
+*.wav
+uploads/
