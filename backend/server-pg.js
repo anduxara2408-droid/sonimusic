@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { Resend } from 'resend';
 import pkg from 'pg';
+import { ensureSchema } from './db-init.js';
 const { Pool } = pkg;
 
 const app = express();
@@ -1026,7 +1027,12 @@ app.listen(PORT, () => {
     console.error('🗄️ Base de données : ❌ DATABASE_URL non définie');
   } else {
     pool.query('SELECT 1')
-      .then(() => console.log('🗄️ Base de données : ✅ connectée'))
+      .then(() => {
+        console.log('🗄️ Base de données : ✅ connectée');
+        return ensureSchema(pool)
+          .then(() => console.log('🗄️ Schéma : ✅ tables vérifiées'))
+          .catch((err) => console.error('🗄️ Schéma : ❌ échec de l\'initialisation -', err.code || err.message));
+      })
       .catch((err) => console.error('🗄️ Base de données : ❌ connexion impossible -', err.code || 'erreur inconnue'));
   }
 });
