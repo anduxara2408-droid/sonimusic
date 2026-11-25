@@ -1020,6 +1020,15 @@ app.listen(PORT, () => {
   console.log(`📸 Profile: /api/users/profile`);
   console.log(`📧 Email: Resend (${resend ? '✅ Configuré' : '❌ Non configuré'})`);
   console.log('='.repeat(60));
+
+  // Vérification de la connexion à la base au démarrage (sans afficher l'URL).
+  if (!process.env.DATABASE_URL) {
+    console.error('🗄️ Base de données : ❌ DATABASE_URL non définie');
+  } else {
+    pool.query('SELECT 1')
+      .then(() => console.log('🗄️ Base de données : ✅ connectée'))
+      .catch((err) => console.error('🗄️ Base de données : ❌ connexion impossible -', err.code || 'erreur inconnue'));
+  }
 });
 
 process.on('uncaughtException', (error) => {
