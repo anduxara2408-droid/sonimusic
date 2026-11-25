@@ -3,7 +3,6 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import pkg from 'pg';
 const { Pool } = pkg;
@@ -11,56 +10,240 @@ const { Pool } = pkg;
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connexion directe à PostgreSQL
+// Render (et la plupart des hébergeurs) placent l'app derrière un proxy :
+// nécessaire pour que req.ip soit la vraie IP du client (limiteur de tentatives).
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+// ============================================================
+// CONFIGURATION
+// ============================================================
+
+// Connexion directe à PostgreSQL.
+// rejectUnauthorized n'est activé que si DB_SSL_STRICT=true, pour ne pas casser
+// la connexion actuelle (certificat non vérifiable côté hébergeur).
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: process.env.DB_SSL_STRICT === 'true' }
 });
 
-// Configuration Resend (email moderne et fiable)
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Resend : client créé seulement si la clé API est définie.
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-// Ancienne configuration nodemailer (gardée pour compatibilité, mais non utilisée)
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp-fr.securemail.pro',
-  port: parseInt(process.env.EMAIL_PORT) || 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER || 'noreply@sonimusic.online',
-    pass: process.env.EMAIL_PASS || 'Nore@SOniMUSIC.online'
+const EMAIL_FROM = `SONIMUSIC <noreply@${process.env.EMAIL_DOMAIN || 'sonimusic.online'}>`;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://sonimusic.online';
+
+// Secret JWT : jamais de valeur par défaut dans le code.
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 16) {
+  JWT_SECRET = crypto.randomBytes(48).toString('hex');
+  console.warn('='.repeat(60));
+  console.warn('⚠️  JWT_SECRET absent ou trop court (moins de 16 caractères).');
+  console.warn('⚠️  Un secret aléatoire TEMPORAIRE a été généré : toutes les sessions');
+  console.warn('⚠️  seront invalidées à chaque redémarrage du serveur.');
+  console.warn('⚠️  Définissez JWT_SECRET dans les variables d\'environnement.');
+  console.warn('='.repeat(60));
+}
+const JWT_OPTIONS = { algorithm: 'HS256', expiresIn: '7d' };
+
+const signToken = (user) =>
+  jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, JWT_OPTIONS);
+
+const verifyToken = (token) => jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+
+// ============================================================
+// UTILITAIRES DE VALIDATION
+// ============================================================
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ALLOWED_ROLES = ['LISTENER', 'ARTIST'];
+
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const normalizeEmail = (email) => (typeof email === 'string' ? email.trim().toLowerCase() : '');
+
+const isValidEmail = (email) =>
+  typeof email === 'string' && email.length <= 254 && EMAIL_REGEX.test(email);
+
+const isValidPassword = (password) =>
+  typeof password === 'string' && password.length >= 8 && password.length <= 72;
+
+const isValidName = (name) =>
+  typeof name === 'string' && name.trim().length >= 2 && name.trim().length <= 100;
+
+const toPositiveInt = (value) => {
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : null;
+};
+
+const optionalString = (value, max) => {
+  if (value === undefined || value === null) return { ok: true, value: null };
+  if (typeof value !== 'string' || value.length > max) return { ok: false };
+  return { ok: true, value };
+};
+
+const isValidProfilePicUrl = (value) => {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 500) return false;
+  if (value.startsWith('/') && !value.startsWith('//')) return true; // chemin relatif
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
   }
-});
+};
+
+const hashResetToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+const parseLikedBy = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const sendEmail = async ({ to, subject, html }) => {
+  if (!resend) {
+    console.warn('📧 RESEND_API_KEY non configurée : email non envoyé.');
+    return false;
+  }
+  const { error } = await resend.emails.send({ from: EMAIL_FROM, to: [to], subject, html });
+  if (error) {
+    console.error('❌ Erreur Resend:', error.message || error.name || 'inconnue');
+    return false;
+  }
+  return true;
+};
+
+// ============================================================
+// LIMITEUR DE TENTATIVES (en mémoire, par IP)
+// ============================================================
+
+const rateLimitStore = new Map();
+
+const rateLimit = ({ name, windowMs, max }) => (req, res, next) => {
+  const key = `${name}:${req.ip}`;
+  const now = Date.now();
+  let entry = rateLimitStore.get(key);
+  if (!entry || entry.resetAt <= now) {
+    entry = { count: 0, resetAt: now + windowMs };
+    rateLimitStore.set(key, entry);
+  }
+  entry.count += 1;
+  if (entry.count > max) {
+    const retryAfter = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
+    res.set('Retry-After', String(retryAfter));
+    return res.status(429).json({ error: 'Trop de tentatives. Veuillez réessayer plus tard.' });
+  }
+  next();
+};
+
+// Nettoyage périodique des entrées expirées
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitStore) {
+    if (entry.resetAt <= now) rateLimitStore.delete(key);
+  }
+}, 5 * 60 * 1000).unref();
+
+const FIFTEEN_MIN = 15 * 60 * 1000;
+const ONE_HOUR = 60 * 60 * 1000;
+const loginLimiter = rateLimit({ name: 'login', windowMs: FIFTEEN_MIN, max: 20 });
+const registerLimiter = rateLimit({ name: 'register', windowMs: ONE_HOUR, max: 10 });
+const forgotLimiter = rateLimit({ name: 'forgot', windowMs: ONE_HOUR, max: 5 });
+const resetLimiter = rateLimit({ name: 'reset', windowMs: FIFTEEN_MIN, max: 10 });
 
 // ============================================================
 // MIDDLEWARE AUTH
 // ============================================================
-const authenticateToken = (req, res, next) => {
+
+const extractBearer = (req) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader) {
+  if (typeof authHeader !== 'string') return null;
+  const [scheme, token] = authHeader.split(' ');
+  if (!token || scheme.toLowerCase() !== 'bearer') return null;
+  return token;
+};
+
+const authenticateToken = (req, res, next) => {
+  if (!req.headers.authorization) {
     return res.status(401).json({ error: 'Non authentifié' });
   }
-  const token = authHeader.split(' ')[1];
+  const token = extractBearer(req);
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789');
-    req.user = decoded;
+    if (!token) throw new Error('missing');
+    req.user = verifyToken(token);
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Token invalide' });
   }
 };
 
-const isAdmin = (req, res, next) => {
-  if (req.user.role !== 'ADMIN') {
-    return res.status(403).json({ error: 'Accès réservé aux administrateurs' });
+// Authentification optionnelle : renseigne req.user si un token valide est fourni.
+const optionalAuth = (req, res, next) => {
+  const token = extractBearer(req);
+  if (token) {
+    try {
+      req.user = verifyToken(token);
+    } catch {
+      req.user = undefined;
+    }
   }
   next();
 };
+
+const getDbRole = async (userId) => {
+  const id = toPositiveInt(userId);
+  if (!id) return null;
+  const result = await pool.query('SELECT role FROM "User" WHERE id = $1', [id]);
+  return result.rows[0]?.role || null;
+};
+
+// Le rôle est vérifié en base, pas seulement dans le token.
+const isAdmin = async (req, res, next) => {
+  try {
+    const role = await getDbRole(req.user?.id);
+    if (role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Accès réservé aux administrateurs' });
+    }
+    next();
+  } catch (error) {
+    console.error('Erreur vérification admin:', error.message);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// ============================================================
+// MIDDLEWARES GLOBAUX
+// ============================================================
+
+app.use((req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains'
+  });
+  next();
+});
 
 app.use(cors({
   origin: ['https://sonimusic.online', 'http://localhost:5173', 'https://sonimusic-1.onrender.com'],
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // ============================================================
 // ROUTE DE SANTÉ
@@ -70,7 +253,8 @@ app.get('/api/health', async (req, res) => {
     await pool.query('SELECT NOW()');
     res.json({ status: 'OK', message: 'SONIMUSIC API is running', database: 'connected' });
   } catch (error) {
-    res.json({ status: 'OK', message: 'SONIMUSIC API is running', database: 'error', error: error.message });
+    console.error('Erreur health check DB:', error.message);
+    res.json({ status: 'OK', message: 'SONIMUSIC API is running', database: 'error' });
   }
 });
 
@@ -106,10 +290,32 @@ app.get('/', (req, res) => {
 // ROUTES D'AUTHENTIFICATION
 // ============================================================
 
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', registerLimiter, async (req, res) => {
   try {
-    const { email, name, password, role, artistName, bio, country } = req.body;
-    const existing = await pool.query('SELECT * FROM "User" WHERE email = $1', [email]);
+    const { name, password, role, artistName, bio, country } = req.body || {};
+    const email = normalizeEmail(req.body?.email);
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: 'Adresse email invalide' });
+    }
+    if (!isValidName(name)) {
+      return res.status(400).json({ error: 'Le nom doit contenir entre 2 et 100 caractères' });
+    }
+    if (!isValidPassword(password)) {
+      return res.status(400).json({ error: 'Le mot de passe doit contenir entre 8 et 72 caractères' });
+    }
+    const artistNameCheck = optionalString(artistName, 100);
+    const bioCheck = optionalString(bio, 1000);
+    const countryCheck = optionalString(country, 100);
+    if (!artistNameCheck.ok || !bioCheck.ok || !countryCheck.ok) {
+      return res.status(400).json({ error: 'Champs de profil invalides ou trop longs' });
+    }
+
+    // Seuls LISTENER et ARTIST sont acceptés (jamais ADMIN).
+    const safeRole = ALLOWED_ROLES.includes(role) ? role : 'LISTENER';
+    const cleanName = name.trim();
+
+    const existing = await pool.query('SELECT id FROM "User" WHERE LOWER(email) = $1', [email]);
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: 'Cet email est déjà utilisé' });
     }
@@ -118,21 +324,15 @@ app.post('/api/auth/register', async (req, res) => {
       `INSERT INTO "User" (email, password, name, role, "artistName", bio, country, "emailVerified", "createdAt", "updatedAt")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
        RETURNING id, email, name, role`,
-      [email, hashedPassword, name, role || 'LISTENER', artistName || null, bio || null, country || null, true]
+      [email, hashedPassword, cleanName, safeRole, artistNameCheck.value || null, bioCheck.value || null, countryCheck.value || null, true]
     );
-    const token = jwt.sign(
-      { id: result.rows[0].id, email: result.rows[0].email, role: result.rows[0].role },
-      process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789',
-      { expiresIn: '7d' }
-    );
+    const token = signToken(result.rows[0]);
 
-    // ===== ENVOI DE L'EMAIL DE BIENVENUE AVEC RESEND =====
-    try {
-      const { data, error } = await resend.emails.send({
-        from: `SONIMUSIC <noreply@${process.env.EMAIL_DOMAIN || 'sonimusic.online'}>`,
-        to: [email],
-        subject: '🎵 Bienvenue sur SONIMUSIC !',
-        html: `
+    // ===== ENVOI DE L'EMAIL DE BIENVENUE AVEC RESEND (non bloquant) =====
+    sendEmail({
+      to: email,
+      subject: '🎵 Bienvenue sur SONIMUSIC !',
+      html: `
           <!DOCTYPE html>
           <html>
           <head>
@@ -147,11 +347,11 @@ app.post('/api/auth/register', async (req, res) => {
                 <p style="color: #888; margin: 5px 0 0;">La musique Soninké à portée de clic</p>
               </div>
               <div style="padding: 30px 0;">
-                <p style="font-size: 16px; line-height: 1.6;">Bonjour <strong style="color: #d4af37;">${name}</strong>,</p>
+                <p style="font-size: 16px; line-height: 1.6;">Bonjour <strong style="color: #d4af37;">${escapeHtml(cleanName)}</strong>,</p>
                 <p style="font-size: 16px; line-height: 1.6; color: #ccc;">Bienvenue sur <strong style="color: #d4af37;">SONIMUSIC</strong> !</p>
                 <p style="font-size: 16px; line-height: 1.6; color: #ccc;">Votre compte a été créé avec succès. Vous pouvez maintenant écouter, commenter et partager la musique Soninké.</p>
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${process.env.FRONTEND_URL || 'https://sonimusic.online'}" style="display: inline-block; padding: 14px 40px; background: #d4af37; color: #000000; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px;">
+                  <a href="${escapeHtml(FRONTEND_URL)}" style="display: inline-block; padding: 14px 40px; background: #d4af37; color: #000000; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px;">
                     🎵 Découvrir SONIMUSIC
                   </a>
                 </div>
@@ -163,17 +363,9 @@ app.post('/api/auth/register', async (req, res) => {
           </body>
           </html>
         `
-      });
-
-      if (error) {
-        console.error('❌ Erreur Resend (bienvenue):', error);
-      } else {
-        console.log('✅ Email de bienvenue envoyé à:', email);
-        console.log('📧 Message ID:', data?.id);
-      }
-    } catch (emailError) {
+    }).catch((emailError) => {
       console.error('⚠️ Erreur envoi email de bienvenue:', emailError.message);
-    }
+    });
 
     res.status(201).json({ success: true, message: 'Inscription réussie !', token, user: result.rows[0] });
   } catch (error) {
@@ -182,10 +374,14 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const result = await pool.query('SELECT * FROM "User" WHERE email = $1', [email]);
+    const email = normalizeEmail(req.body?.email);
+    const { password } = req.body || {};
+    if (!email || typeof password !== 'string' || password.length === 0) {
+      return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+    }
+    const result = await pool.query('SELECT * FROM "User" WHERE LOWER(email) = $1', [email]);
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
@@ -194,11 +390,7 @@ app.post('/api/auth/login', async (req, res) => {
     if (!isValid) {
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'superSecretKeyChangeThisInProduction123456789',
-      { expiresIn: '7d' }
-    );
+    const token = signToken(user);
     res.json({
       success: true,
       token,
@@ -235,51 +427,31 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 // MOT DE PASSE OUBLIÉ AVEC RESEND
 // ============================================================
 
-app.post('/api/auth/forgot-password', async (req, res) => {
-  try {
-    const { email } = req.body;
-    console.log('🔑 Demande de réinitialisation pour:', email);
+const FORGOT_PASSWORD_RESPONSE = {
+  success: true,
+  message: 'Si un compte existe avec cet email, un lien de réinitialisation vous a été envoyé.'
+};
 
-    const userResult = await pool.query('SELECT * FROM "User" WHERE email = $1', [email]);
+const processForgotPassword = async (email) => {
+  const userResult = await pool.query('SELECT id, email, name FROM "User" WHERE LOWER(email) = $1', [email]);
+  if (userResult.rows.length === 0) return;
 
-    if (userResult.rows.length === 0) {
-      console.log('⚠️ Email non trouvé:', email);
-      return res.json({
-        success: true,
-        message: 'Si un compte existe avec cet email, un lien de réinitialisation vous a été envoyé.'
-      });
-    }
+  const user = userResult.rows[0];
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const resetTokenExpiry = new Date(Date.now() + ONE_HOUR);
 
-    const user = userResult.rows[0];
-    console.log('✅ Utilisateur trouvé:', user.email);
+  // Seul le hash SHA-256 du token est stocké en base.
+  await pool.query(
+    `UPDATE "User" SET "resetToken" = $1, "resetTokenExpiry" = $2 WHERE id = $3`,
+    [hashResetToken(rawToken), resetTokenExpiry, user.id]
+  );
 
-    const resetToken = crypto.randomUUID();
-    const resetTokenExpiry = new Date(Date.now() + 3600000);
+  const resetUrl = `${FRONTEND_URL}/reset-password?token=${rawToken}&email=${encodeURIComponent(user.email)}`;
 
-    await pool.query(
-      `UPDATE "User" SET "resetToken" = $1, "resetTokenExpiry" = $2 WHERE id = $3`,
-      [resetToken, resetTokenExpiry, user.id]
-    );
-    console.log('✅ Token sauvegardé en base');
-
-    const frontendUrl = process.env.FRONTEND_URL || 'https://sonimusic.online';
-    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
-
-    console.log('='.repeat(60));
-    console.log('🔑 LIEN DE RÉINITIALISATION');
-    console.log('📧 Email:', email);
-    console.log('🔗 Lien:', resetUrl);
-    console.log('='.repeat(60));
-
-    // ===== ENVOI DE L'EMAIL AVEC RESEND =====
-    let emailSent = false;
-
-    try {
-      const { data, error } = await resend.emails.send({
-        from: `SONIMUSIC <noreply@${process.env.EMAIL_DOMAIN || 'sonimusic.online'}>`,
-        to: [email],
-        subject: '🔑 Réinitialisation de votre mot de passe SONIMUSIC',
-        html: `
+  await sendEmail({
+    to: user.email,
+    subject: '🔑 Réinitialisation de votre mot de passe SONIMUSIC',
+    html: `
           <!DOCTYPE html>
           <html>
           <head>
@@ -294,11 +466,11 @@ app.post('/api/auth/forgot-password', async (req, res) => {
                 <p style="color: #888; margin: 5px 0 0;">La musique Soninké à portée de clic</p>
               </div>
               <div style="padding: 30px 0;">
-                <p style="font-size: 16px; line-height: 1.6;">Bonjour <strong style="color: #d4af37;">${user.name || 'utilisateur'}</strong>,</p>
+                <p style="font-size: 16px; line-height: 1.6;">Bonjour <strong style="color: #d4af37;">${escapeHtml(user.name || 'utilisateur')}</strong>,</p>
                 <p style="font-size: 16px; line-height: 1.6; color: #ccc;">Vous avez demandé à réinitialiser votre mot de passe pour votre compte SONIMUSIC.</p>
                 <p style="font-size: 16px; line-height: 1.6; color: #ccc;">Cliquez sur le bouton ci-dessous pour définir un nouveau mot de passe :</p>
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${resetUrl}" style="display: inline-block; padding: 14px 40px; background: #d4af37; color: #000000; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px;">
+                  <a href="${escapeHtml(resetUrl)}" style="display: inline-block; padding: 14px 40px; background: #d4af37; color: #000000; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px;">
                     🔐 Réinitialiser mon mot de passe
                   </a>
                 </div>
@@ -307,61 +479,56 @@ app.post('/api/auth/forgot-password', async (req, res) => {
               </div>
               <div style="border-top: 1px solid #333; padding-top: 20px; text-align: center; color: #666; font-size: 12px;">
                 <p>© 2026 SONIMUSIC - Tous droits réservés</p>
-                <p>Cet email a été envoyé à ${email}</p>
+                <p>Cet email a été envoyé à ${escapeHtml(user.email)}</p>
               </div>
             </div>
           </body>
           </html>
         `
-      });
+  });
+};
 
-      if (error) {
-        console.error('❌ Erreur Resend:', error);
-        throw error;
-      }
-
-      emailSent = true;
-      console.log('✅ Email envoyé avec succès à:', email);
-      console.log('📧 Message ID:', data?.id);
-
-    } catch (error) {
-      console.error('❌ Erreur envoi email:', error.message);
-    }
-
-    res.json({
-      success: true,
-      message: 'Un email de réinitialisation vous a été envoyé.',
-      emailSent: emailSent,
-      debug: {
-        link: resetUrl
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Erreur forgot-password:', error);
-    res.status(500).json({
-      error: 'Erreur lors de la demande de réinitialisation'
-    });
+app.post('/api/auth/forgot-password', forgotLimiter, (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: 'Adresse email invalide' });
   }
+
+  // Réponse identique que le compte existe ou non, envoyée sans attendre l'email.
+  res.json(FORGOT_PASSWORD_RESPONSE);
+
+  processForgotPassword(email).catch((error) => {
+    console.error('❌ Erreur forgot-password:', error.message);
+  });
 });
 
 // ============================================================
 // RÉINITIALISATION DU MOT DE PASSE
 // ============================================================
 
-app.post('/api/auth/reset-password', async (req, res) => {
+app.post('/api/auth/reset-password', resetLimiter, async (req, res) => {
   try {
-    const { email, token, newPassword } = req.body;
+    const email = normalizeEmail(req.body?.email);
+    const { token, newPassword } = req.body || {};
+    if (!email || typeof token !== 'string' || token.length === 0 || token.length > 200) {
+      return res.status(400).json({ error: 'Token invalide ou expiré' });
+    }
+    if (!isValidPassword(newPassword)) {
+      return res.status(400).json({ error: 'Le mot de passe doit contenir entre 8 et 72 caractères' });
+    }
     const userResult = await pool.query(
-      `SELECT * FROM "User" WHERE email = $1 AND "resetToken" = $2 AND "resetTokenExpiry" > NOW()`,
-      [email, token]
+      `SELECT id FROM "User" WHERE LOWER(email) = $1 AND "resetToken" = $2 AND "resetTokenExpiry" > NOW()`,
+      [email, hashResetToken(token)]
     );
     if (userResult.rows.length === 0) {
       return res.status(400).json({ error: 'Token invalide ou expiré' });
     }
     const user = userResult.rows[0];
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await pool.query(`UPDATE "User" SET password = $1, "resetToken" = NULL, "resetTokenExpiry" = NULL WHERE id = $2`, [hashedPassword, user.id]);
+    await pool.query(
+      `UPDATE "User" SET password = $1, "resetToken" = NULL, "resetTokenExpiry" = NULL, "updatedAt" = NOW() WHERE id = $2`,
+      [hashedPassword, user.id]
+    );
     res.json({ success: true, message: 'Mot de passe réinitialisé avec succès !' });
   } catch (error) {
     console.error('Erreur reset-password:', error);
@@ -387,15 +554,27 @@ app.get('/api/songs', async (req, res) => {
   }
 });
 
-app.get('/api/songs/:id', async (req, res) => {
+app.get('/api/songs/:id', optionalAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = toPositiveInt(req.params.id);
+    if (!id) return res.status(404).json({ error: 'Musique non trouvée' });
     const result = await pool.query(`
       SELECT s.*, u.name as "artistName", u.id as "artistId"
       FROM "Song" s LEFT JOIN "User" u ON s."artistId" = u.id WHERE s.id = $1
     `, [id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Musique non trouvée' });
-    res.json(result.rows[0]);
+    const song = result.rows[0];
+
+    // Un morceau non validé n'est visible que par son artiste ou un admin.
+    if (song.status !== 'ACCEPTED') {
+      const requesterId = toPositiveInt(req.user?.id);
+      const isOwner = requesterId !== null && requesterId === Number(song.artistId);
+      const isAdminUser = !isOwner && requesterId !== null && (await getDbRole(requesterId)) === 'ADMIN';
+      if (!isOwner && !isAdminUser) {
+        return res.status(404).json({ error: 'Musique non trouvée' });
+      }
+    }
+    res.json(song);
   } catch (error) {
     console.error('Erreur récupération musique:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération de la musique' });
@@ -421,7 +600,8 @@ app.get('/api/artists', async (req, res) => {
 
 app.get('/api/artists/:id', async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = toPositiveInt(req.params.id);
+    if (!id) return res.status(404).json({ error: 'Artiste non trouvé' });
     const artistResult = await pool.query(`
       SELECT id, name, "artistName", bio, country, "profilePic"
       FROM "User" WHERE id = $1 AND role = 'ARTIST'
@@ -461,15 +641,24 @@ app.get('/api/albums', async (req, res) => {
 // ROUTES USERS
 // ============================================================
 
-app.get('/api/users/:id', async (req, res) => {
+app.get('/api/users/:id', optionalAuth, async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = toPositiveInt(req.params.id);
+    if (!id) return res.status(404).json({ error: 'Utilisateur non trouvé' });
     const result = await pool.query(
       `SELECT id, email, name, role, "artistName", bio, country, "profilePic", "createdAt" FROM "User" WHERE id = $1`,
       [id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Utilisateur non trouvé' });
-    res.json(result.rows[0]);
+    const user = result.rows[0];
+
+    // L'email n'est visible que par l'utilisateur lui-même ou un admin.
+    const requesterId = toPositiveInt(req.user?.id);
+    const isSelf = requesterId !== null && requesterId === id;
+    const canSeeEmail = isSelf || (requesterId !== null && (await getDbRole(requesterId)) === 'ADMIN');
+    if (!canSeeEmail) delete user.email;
+
+    res.json(user);
   } catch (error) {
     console.error('Erreur récupération utilisateur:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération de l\'utilisateur' });
@@ -482,10 +671,13 @@ app.get('/api/users/:id', async (req, res) => {
 
 app.put('/api/users/profile-pic', authenticateToken, async (req, res) => {
   try {
-    const { profilePic } = req.body;
+    const { profilePic } = req.body || {};
     if (!profilePic) return res.status(400).json({ error: 'URL de la photo requise' });
+    if (!isValidProfilePicUrl(profilePic)) {
+      return res.status(400).json({ error: 'URL de la photo invalide (http, https ou chemin relatif, 500 caractères max)' });
+    }
     const result = await pool.query(
-      `UPDATE "User" SET "profilePic" = $1, "updatedAt" = NOW() WHERE id = $2 
+      `UPDATE "User" SET "profilePic" = $1, "updatedAt" = NOW() WHERE id = $2
        RETURNING id, email, name, "profilePic", role`,
       [profilePic, req.user.id]
     );
@@ -499,11 +691,24 @@ app.put('/api/users/profile-pic', authenticateToken, async (req, res) => {
 
 app.put('/api/users/profile', authenticateToken, async (req, res) => {
   try {
-    const { name, bio, country } = req.body;
+    const { name, bio, country } = req.body || {};
+
+    let cleanName = null;
+    if (name !== undefined && name !== null && name !== '') {
+      if (!isValidName(name)) {
+        return res.status(400).json({ error: 'Le nom doit contenir entre 2 et 100 caractères' });
+      }
+      cleanName = name.trim();
+    }
+    const bioCheck = optionalString(bio, 1000);
+    const countryCheck = optionalString(country, 100);
+    if (!bioCheck.ok) return res.status(400).json({ error: 'La bio ne doit pas dépasser 1000 caractères' });
+    if (!countryCheck.ok) return res.status(400).json({ error: 'Le pays ne doit pas dépasser 100 caractères' });
+
     const result = await pool.query(
       `UPDATE "User" SET name = COALESCE($1, name), bio = COALESCE($2, bio), country = COALESCE($3, country), "updatedAt" = NOW()
        WHERE id = $4 RETURNING id, email, name, role, "artistName", bio, country, "profilePic"`,
-      [name, bio, country, req.user.id]
+      [cleanName, bioCheck.value, countryCheck.value, req.user.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Utilisateur non trouvé' });
     res.json({ success: true, message: 'Profil mis à jour', user: result.rows[0] });
@@ -532,7 +737,7 @@ app.get('/api/favorites/my-favorites', authenticateToken, async (req, res) => {
 
 app.post('/api/favorites/toggle', authenticateToken, async (req, res) => {
   try {
-    const { songId } = req.body;
+    const { songId } = req.body || {};
     const existing = await pool.query('SELECT * FROM "Favorite" WHERE "userId" = $1 AND "songId" = $2', [req.user.id, songId]);
     if (existing.rows.length > 0) {
       await pool.query('DELETE FROM "Favorite" WHERE "userId" = $1 AND "songId" = $2', [req.user.id, songId]);
@@ -563,7 +768,7 @@ app.get('/api/playlists/my', authenticateToken, async (req, res) => {
 
 app.post('/api/playlists', authenticateToken, async (req, res) => {
   try {
-    const { name, description, isPublic } = req.body;
+    const { name, description, isPublic } = req.body || {};
     if (!name) return res.status(400).json({ error: 'Nom requis' });
     const result = await pool.query(
       `INSERT INTO "Playlist" (name, description, "isPublic", "userId", "createdAt", "updatedAt")
@@ -580,7 +785,7 @@ app.post('/api/playlists', authenticateToken, async (req, res) => {
 app.post('/api/playlists/:id/add-song', authenticateToken, async (req, res) => {
   try {
     const playlistId = parseInt(req.params.id);
-    const { songId } = req.body;
+    const { songId } = req.body || {};
     const playlistCheck = await pool.query('SELECT * FROM "Playlist" WHERE id = $1 AND "userId" = $2', [playlistId, req.user.id]);
     if (playlistCheck.rows.length === 0) return res.status(404).json({ error: 'Playlist non trouvée' });
     const existing = await pool.query('SELECT * FROM "PlaylistSong" WHERE "playlistId" = $1 AND "songId" = $2', [playlistId, songId]);
@@ -621,7 +826,7 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
 
 app.post('/api/notifications/read', authenticateToken, async (req, res) => {
   try {
-    const { notificationId } = req.body;
+    const { notificationId } = req.body || {};
     await pool.query('UPDATE "Notification" SET read = true WHERE id = $1 AND "userId" = $2', [notificationId, req.user.id]);
     res.json({ success: true });
   } catch (error) {
@@ -636,16 +841,18 @@ app.post('/api/notifications/read', authenticateToken, async (req, res) => {
 
 app.get('/api/comments', async (req, res) => {
   try {
-    const { songId } = req.query;
+    const songId = toPositiveInt(req.query.songId);
     if (!songId) return res.status(400).json({ error: 'SongId requis' });
     const result = await pool.query(`
-      SELECT c.*, u.name as "userName", u.email as "userEmail", u."profilePic" as "userProfilePic"
+      SELECT c.*, u.name as "userName", u."profilePic" as "userProfilePic"
       FROM "Comment" c JOIN "User" u ON c."userId" = u.id
       WHERE c."songId" = $1 ORDER BY c."createdAt" DESC
-    `, [parseInt(songId)]);
+    `, [songId]);
     const commentMap = {};
     const rootComments = [];
-    result.rows.forEach(c => { commentMap[c.id] = { ...c, replies: [] }; });
+    result.rows.forEach(c => {
+      commentMap[c.id] = { ...c, name: c.userName, profilePic: c.userProfilePic, replies: [] };
+    });
     result.rows.forEach(c => {
       if (c.parentId && commentMap[c.parentId]) {
         commentMap[c.parentId].replies.push(commentMap[c.id]);
@@ -662,20 +869,34 @@ app.get('/api/comments', async (req, res) => {
 
 app.post('/api/comments', authenticateToken, async (req, res) => {
   try {
-    const { songId, content, parentId } = req.body;
+    const { content } = req.body || {};
+    const songId = toPositiveInt(req.body?.songId);
     if (!songId || !content) return res.status(400).json({ error: 'SongId et contenu requis' });
-    const userResult = await pool.query('SELECT id, name, email, "profilePic" FROM "User" WHERE id = $1', [req.user.id]);
+
+    let parentId = null;
+    if (req.body.parentId !== undefined && req.body.parentId !== null && req.body.parentId !== '') {
+      parentId = toPositiveInt(req.body.parentId);
+      if (!parentId) return res.status(400).json({ error: 'parentId invalide' });
+    }
+    if (typeof content !== 'string' || content.trim().length < 1 || content.length > 1000) {
+      return res.status(400).json({ error: 'Le commentaire doit contenir entre 1 et 1000 caractères' });
+    }
+
+    const userResult = await pool.query('SELECT id, name, "profilePic" FROM "User" WHERE id = $1', [req.user.id]);
     const user = userResult.rows[0];
+    if (!user) return res.status(401).json({ error: 'Token invalide' });
+
     const result = await pool.query(
       `INSERT INTO "Comment" (content, "userId", "songId", "parentId", "createdAt", "updatedAt")
        VALUES ($1, $2, $3, $4, NOW(), NOW()) RETURNING *`,
-      [content, req.user.id, parseInt(songId), parentId || null]
+      [content, req.user.id, songId, parentId]
     );
     const newComment = {
       ...result.rows[0],
       userName: user.name,
-      userEmail: user.email,
+      name: user.name,
       userProfilePic: user.profilePic,
+      profilePic: user.profilePic,
       replies: [],
       likes: 0,
       likedBy: []
@@ -689,11 +910,12 @@ app.post('/api/comments', authenticateToken, async (req, res) => {
 
 app.post('/api/comments/:id/like', authenticateToken, async (req, res) => {
   try {
-    const commentId = parseInt(req.params.id);
+    const commentId = toPositiveInt(req.params.id);
+    if (!commentId) return res.status(404).json({ error: 'Commentaire non trouvé' });
     const commentResult = await pool.query('SELECT * FROM "Comment" WHERE id = $1', [commentId]);
     if (commentResult.rows.length === 0) return res.status(404).json({ error: 'Commentaire non trouvé' });
     const comment = commentResult.rows[0];
-    let likedBy = comment.likedBy || [];
+    const likedBy = parseLikedBy(comment.likedBy);
     const index = likedBy.indexOf(req.user.id);
     let liked = false;
     if (index > -1) { likedBy.splice(index, 1); liked = false; }
@@ -708,12 +930,12 @@ app.post('/api/comments/:id/like', authenticateToken, async (req, res) => {
 
 app.delete('/api/comments/:id', authenticateToken, async (req, res) => {
   try {
-    const commentId = parseInt(req.params.id);
+    const commentId = toPositiveInt(req.params.id);
+    if (!commentId) return res.status(404).json({ error: 'Commentaire non trouvé' });
     const commentResult = await pool.query('SELECT * FROM "Comment" WHERE id = $1', [commentId]);
     if (commentResult.rows.length === 0) return res.status(404).json({ error: 'Commentaire non trouvé' });
     const comment = commentResult.rows[0];
-    const userResult = await pool.query('SELECT role FROM "User" WHERE id = $1', [req.user.id]);
-    const userRole = userResult.rows[0]?.role;
+    const userRole = await getDbRole(req.user.id);
     if (comment.userId !== req.user.id && userRole !== 'ADMIN') {
       return res.status(403).json({ error: 'Non autorisé' });
     }
@@ -766,6 +988,23 @@ app.post('/api/admin/songs/:id/reject', authenticateToken, isAdmin, async (req, 
 });
 
 // ============================================================
+// GESTIONNAIRE D'ERREURS FINAL (JSON)
+// ============================================================
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'Requête trop volumineuse' });
+  }
+  if (err?.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'JSON invalide' });
+  }
+  console.error('Erreur non gérée:', err?.message || err);
+  if (res.headersSent) return next(err);
+  res.status(err?.status && err.status >= 400 && err.status < 500 ? err.status : 500)
+    .json({ error: 'Erreur serveur' });
+});
+
+// ============================================================
 // DÉMARRAGE DU SERVEUR
 // ============================================================
 app.listen(PORT, () => {
@@ -779,7 +1018,7 @@ app.listen(PORT, () => {
   console.log(`🎤 Artists: /api/artists`);
   console.log(`💬 Comments: /api/comments`);
   console.log(`📸 Profile: /api/users/profile`);
-  console.log(`📧 Email: Resend (${process.env.RESEND_API_KEY ? '✅ Configuré' : '❌ Non configuré'})`);
+  console.log(`📧 Email: Resend (${resend ? '✅ Configuré' : '❌ Non configuré'})`);
   console.log('='.repeat(60));
 });
 
@@ -787,6 +1026,6 @@ process.on('uncaughtException', (error) => {
   console.error('💥 Uncaught Exception:', error);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   console.error('💥 Unhandled Rejection:', reason);
 });
