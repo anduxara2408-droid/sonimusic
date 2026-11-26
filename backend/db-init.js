@@ -16,12 +16,14 @@ CREATE TABLE IF NOT EXISTS "User" (
   "profilePic"        TEXT,
   "emailVerified"     BOOLEAN NOT NULL DEFAULT false,
   "verificationToken" TEXT,
+  "verificationTokenExpiry" TIMESTAMPTZ,
   "resetToken"        TEXT,
   "resetTokenExpiry"  TIMESTAMPTZ,
   "createdAt"         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt"         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "User_email_lower_key" ON "User" (LOWER(email));
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "verificationTokenExpiry" TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS "Song" (
   id                SERIAL PRIMARY KEY,
