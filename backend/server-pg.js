@@ -100,6 +100,20 @@ const isValidProfilePicUrl = (value) => {
   }
 };
 
+// Le frontend lit song.artist.artistName / song.artist.name : on ajoute cet objet.
+const SONG_SELECT = `
+  SELECT s.*, u.name as "artistName", u.id as "artistId",
+         u."artistName" as "artistDisplayName", u."profilePic" as "artistProfilePic"
+  FROM "Song" s LEFT JOIN "User" u ON s."artistId" = u.id`;
+
+const withArtist = (row) => {
+  const { artistDisplayName, artistProfilePic, ...song } = row;
+  song.artist = song.artistId
+    ? { id: song.artistId, name: song.artistName, artistName: artistDisplayName || song.artistName, profilePic: artistProfilePic || null }
+    : null;
+  return song;
+};
+
 const hashResetToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
 const parseLikedBy = (value) => {
@@ -543,12 +557,10 @@ app.post('/api/auth/reset-password', resetLimiter, async (req, res) => {
 
 app.get('/api/songs', async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT s.*, u.name as "artistName", u.id as "artistId"
-      FROM "Song" s LEFT JOIN "User" u ON s."artistId" = u.id
-      WHERE s.status = 'ACCEPTED' ORDER BY s."createdAt" DESC LIMIT 50
+    const result = await pool.query(`${SONG_SELECT}
+      WHERE s.status = 'ACCEPTED' ORDER BY s."createdAt" DESC, s.id ASC LIMIT 50
     `);
-    res.json(result.rows);
+    res.json(result.rows.map(withArtist));
   } catch (error) {
     console.error('Erreur récupération musiques:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des musiques' });
@@ -559,12 +571,9 @@ app.get('/api/songs/:id', optionalAuth, async (req, res) => {
   try {
     const id = toPositiveInt(req.params.id);
     if (!id) return res.status(404).json({ error: 'Musique non trouvée' });
-    const result = await pool.query(`
-      SELECT s.*, u.name as "artistName", u.id as "artistId"
-      FROM "Song" s LEFT JOIN "User" u ON s."artistId" = u.id WHERE s.id = $1
-    `, [id]);
+    const result = await pool.query(`${SONG_SELECT} WHERE s.id = $1`, [id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Musique non trouvée' });
-    const song = result.rows[0];
+    const song = withArtist(result.rows[0]);
 
     // Un morceau non validé n'est visible que par son artiste ou un admin.
     if (song.status !== 'ACCEPTED') {
@@ -627,9 +636,14 @@ app.get('/api/artists/:id', async (req, res) => {
 
 app.get('/api/albums', async (req, res) => {
   try {
+    // Les albums restent écrits en dur ; l'identifiant de l'artiste est lu en base.
+    const dembaResult = await pool.query(
+      `SELECT id FROM "User" WHERE role = 'ARTIST' AND "artistName" = 'Demba Tandia' ORDER BY id LIMIT 1`
+    );
+    const dembaId = dembaResult.rows[0]?.id ?? 1;
     const albums = [
-      { id: 1, title: "Fii Siire", artistId: 1, artist: { id: 1, name: "Demba Tandia" }, year: 2022, coverArt: "/images/albums/fii-siire.jpg", description: "Album Fii Siire de Demba Tandia", songs: [1,2,3,4,5,6,7,8,9,10] },
-      { id: 2, title: "Bataaxe", artistId: 1, artist: { id: 1, name: "Demba Tandia" }, year: 2023, coverArt: "/images/albums/bataaxe.jpg", description: "Album Bataaxe de Demba Tandia", songs: [11,12,13,14,15,16,17,18] }
+      { id: 1, title: "Fii Siire", artistId: dembaId, artist: { id: dembaId, name: "Demba Tandia" }, year: 2022, coverArt: "/images/albums/fii-siire.jpg", description: "Album Fii Siire de Demba Tandia", songs: [1,2,3,4,5,6,7,8,9,10] },
+      { id: 2, title: "Bataaxe", artistId: dembaId, artist: { id: dembaId, name: "Demba Tandia" }, year: 2023, coverArt: "/images/albums/bataaxe.jpg", description: "Album Bataaxe de Demba Tandia", songs: [11,12,13,14,15,16,17,18] }
     ];
     res.json(albums);
   } catch (error) {
@@ -954,12 +968,10 @@ app.delete('/api/comments/:id', authenticateToken, async (req, res) => {
 
 app.get('/api/admin/songs/pending', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT s.*, u.name as "artistName", u.id as "artistId"
-      FROM "Song" s LEFT JOIN "User" u ON s."artistId" = u.id
+    const result = await pool.query(`${SONG_SELECT}
       WHERE s.status = 'PENDING' ORDER BY s."createdAt" DESC
     `);
-    res.json(result.rows);
+    res.json(result.rows.map(withArtist));
   } catch (error) {
     console.error('Erreur récupération musiques en attente:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des musiques en attente' });

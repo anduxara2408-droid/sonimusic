@@ -138,9 +138,10 @@ function Register() {
               onChange={handleChange}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-[#d4af37] outline-none transition-all"
               required
-              minLength={6}
+              minLength={8}
+              maxLength={72}
             />
-            <p className="text-gray-500 text-xs mt-1">Minimum 6 caractères</p>
+            <p className="text-gray-500 text-xs mt-1">Minimum 8 caractères</p>
           </div>
 
           <div>
