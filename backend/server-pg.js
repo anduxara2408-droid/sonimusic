@@ -335,19 +335,55 @@ app.post('/api/auth/register', registerLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Cet email est déjà utilisé' });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Sans service d'email configuré, impossible de vérifier : le compte est validé directement.
+    const needsVerification = Boolean(resend);
     const result = await pool.query(
       `INSERT INTO "User" (email, password, name, role, "artistName", bio, country, "emailVerified", "createdAt", "updatedAt")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
        RETURNING id, email, name, role`,
-      [email, hashedPassword, cleanName, safeRole, artistNameCheck.value || null, bioCheck.value || null, countryCheck.value || null, true]
+      [email, hashedPassword, cleanName, safeRole, artistNameCheck.value || null, bioCheck.value || null, countryCheck.value || null, !needsVerification]
     );
-    const token = signToken(result.rows[0]);
+    const newUser = result.rows[0];
 
-    // ===== ENVOI DE L'EMAIL DE BIENVENUE AVEC RESEND (non bloquant) =====
-    sendEmail({
-      to: email,
-      subject: '🎵 Bienvenue sur SONIMUSIC !',
-      html: `
+    if (needsVerification) {
+      sendVerificationEmail({ ...newUser, name: cleanName }).catch((emailError) => {
+        console.error('⚠️ Erreur envoi email de vérification:', emailError.message);
+      });
+      return res.status(201).json({
+        success: true,
+        requiresVerification: true,
+        message: 'Inscription réussie ! Vérifiez votre boîte mail pour activer votre compte.',
+        user: newUser
+      });
+    }
+
+    const token = signToken(newUser);
+    res.status(201).json({ success: true, message: 'Inscription réussie !', token, user: newUser });
+  } catch (error) {
+    console.error('Erreur inscription:', error);
+    res.status(500).json({ error: 'Erreur lors de l\'inscription' });
+  }
+});
+
+// ============================================================
+// VÉRIFICATION DE L'ADRESSE EMAIL
+// ============================================================
+
+const VERIFICATION_TTL_MS = 48 * 60 * 60 * 1000;
+
+// Crée un nouveau lien de vérification (seul le hash est stocké) et l'envoie.
+async function sendVerificationEmail(user) {
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  await pool.query(
+    `UPDATE "User" SET "verificationToken" = $1, "verificationTokenExpiry" = $2 WHERE id = $3`,
+    [hashResetToken(rawToken), new Date(Date.now() + VERIFICATION_TTL_MS), user.id]
+  );
+  const verifyUrl = `${FRONTEND_URL}/verify?token=${rawToken}&email=${encodeURIComponent(user.email)}`;
+  return sendEmail({
+    to: user.email,
+    subject: '🎵 Confirmez votre adresse email - SONIMUSIC',
+    html: `
           <!DOCTYPE html>
           <html>
           <head>
@@ -362,14 +398,16 @@ app.post('/api/auth/register', registerLimiter, async (req, res) => {
                 <p style="color: #888; margin: 5px 0 0;">La musique Soninké à portée de clic</p>
               </div>
               <div style="padding: 30px 0;">
-                <p style="font-size: 16px; line-height: 1.6;">Bonjour <strong style="color: #d4af37;">${escapeHtml(cleanName)}</strong>,</p>
+                <p style="font-size: 16px; line-height: 1.6;">Bonjour <strong style="color: #d4af37;">${escapeHtml(user.name || 'utilisateur')}</strong>,</p>
                 <p style="font-size: 16px; line-height: 1.6; color: #ccc;">Bienvenue sur <strong style="color: #d4af37;">SONIMUSIC</strong> !</p>
-                <p style="font-size: 16px; line-height: 1.6; color: #ccc;">Votre compte a été créé avec succès. Vous pouvez maintenant écouter, commenter et partager la musique Soninké.</p>
+                <p style="font-size: 16px; line-height: 1.6; color: #ccc;">Pour activer votre compte, confirmez votre adresse email en cliquant sur le bouton ci-dessous :</p>
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${escapeHtml(FRONTEND_URL)}" style="display: inline-block; padding: 14px 40px; background: #d4af37; color: #000000; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px;">
-                    🎵 Découvrir SONIMUSIC
+                  <a href="${escapeHtml(verifyUrl)}" style="display: inline-block; padding: 14px 40px; background: #d4af37; color: #000000; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px;">
+                    ✅ Confirmer mon email
                   </a>
                 </div>
+                <p style="color: #888; font-size: 14px;">⏳ Ce lien est valable pendant <strong style="color: #d4af37;">48 heures</strong>.</p>
+                <p style="color: #888; font-size: 14px;">🔒 Si vous n'avez pas créé de compte, ignorez simplement cet email.</p>
               </div>
               <div style="border-top: 1px solid #333; padding-top: 20px; text-align: center; color: #666; font-size: 12px;">
                 <p>© 2026 SONIMUSIC - Tous droits réservés</p>
@@ -378,14 +416,30 @@ app.post('/api/auth/register', registerLimiter, async (req, res) => {
           </body>
           </html>
         `
-    }).catch((emailError) => {
-      console.error('⚠️ Erreur envoi email de bienvenue:', emailError.message);
-    });
+  });
+}
 
-    res.status(201).json({ success: true, message: 'Inscription réussie !', token, user: result.rows[0] });
+app.post('/api/auth/verify', resetLimiter, async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const { token } = req.body || {};
+    if (!email || typeof token !== 'string' || token.length === 0 || token.length > 200) {
+      return res.status(400).json({ error: 'Lien de vérification invalide ou expiré' });
+    }
+    const result = await pool.query(
+      `UPDATE "User" SET "emailVerified" = true, "verificationToken" = NULL, "verificationTokenExpiry" = NULL, "updatedAt" = NOW()
+       WHERE LOWER(email) = $1 AND "verificationToken" = $2
+         AND ("verificationTokenExpiry" IS NULL OR "verificationTokenExpiry" > NOW())
+       RETURNING id`,
+      [email, hashResetToken(token)]
+    );
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Lien de vérification invalide ou expiré. Connectez-vous pour recevoir un nouveau lien.' });
+    }
+    res.json({ success: true, verified: true, message: 'Email vérifié avec succès !' });
   } catch (error) {
-    console.error('Erreur inscription:', error);
-    res.status(500).json({ error: 'Erreur lors de l\'inscription' });
+    console.error('Erreur vérification email:', error.message);
+    res.status(500).json({ error: 'Erreur lors de la vérification' });
   }
 });
 
@@ -404,6 +458,18 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) {
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+    }
+    if (user.emailVerified === false) {
+      // Mot de passe correct mais email non confirmé : on renvoie un nouveau lien.
+      if (resend) {
+        sendVerificationEmail(user).catch((emailError) => {
+          console.error('⚠️ Erreur renvoi email de vérification:', emailError.message);
+        });
+      }
+      return res.status(403).json({
+        error: 'Veuillez vérifier votre email avant de vous connecter. Un nouveau lien vient de vous être envoyé.',
+        requiresVerification: true
+      });
     }
     const token = signToken(user);
     res.json({
@@ -541,7 +607,7 @@ app.post('/api/auth/reset-password', resetLimiter, async (req, res) => {
     const user = userResult.rows[0];
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await pool.query(
-      `UPDATE "User" SET password = $1, "resetToken" = NULL, "resetTokenExpiry" = NULL, "updatedAt" = NOW() WHERE id = $2`,
+      `UPDATE "User" SET password = $1, "resetToken" = NULL, "resetTokenExpiry" = NULL, "emailVerified" = true, "updatedAt" = NOW() WHERE id = $2`,
       [hashedPassword, user.id]
     );
     res.json({ success: true, message: 'Mot de passe réinitialisé avec succès !' });
