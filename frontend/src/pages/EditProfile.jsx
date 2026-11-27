@@ -76,14 +76,7 @@ const EditProfile = () => {
     }
   };
 
-  const defaultAvatars = [
-    '/images/artists/demba-tandia.jpg',
-    '/images/artists/jkeria.jpg',
-    '/images/artists/david-soni.jpg',
-    '/images/artists/lass-ko.jpg',
-    '/images/artists/mister-gang.jpg',
-    '/images/artists/pispa-le-roi.jpg',
-  ];
+  const defaultAvatars = [];
 
   const getProfilePic = (url) => url || '/images/artists/default.jpg';
 

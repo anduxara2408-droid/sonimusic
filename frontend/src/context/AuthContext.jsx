@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext();
-const API_URL = 'https://sonimusic-1.onrender.com';
+import { API_URL } from '../lib/api';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

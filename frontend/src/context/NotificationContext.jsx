@@ -3,24 +3,7 @@ import React, { createContext, useState, useContext } from 'react';
 const NotificationContext = createContext();
 
 export const NotificationProvider = ({ children }) => {
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'success',
-      title: 'Musique approuvée !',
-      message: 'Votre morceau "Kankan" a été approuvé par l\'administrateur.',
-      read: false,
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      type: 'info',
-      title: 'Nouveau commentaire',
-      message: 'Demba Tandia a commenté votre morceau.',
-      read: false,
-      createdAt: new Date().toISOString(),
-    },
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   const addNotification = (notification) => {
     setNotifications([{ ...notification, id: Date.now(), read: false }, ...notifications]);

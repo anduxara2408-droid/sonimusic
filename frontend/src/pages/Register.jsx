@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import logo from '/logo.jpeg';
+import PasswordInput from '../components/PasswordInput';
 
 function Register() {
   const navigate = useNavigate();
@@ -131,8 +132,7 @@ function Register() {
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Mot de passe *</label>
-            <input
-              type="password"
+            <PasswordInput
               name="password"
               value={formData.password}
               onChange={handleChange}

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Heart, Trash2, Reply, X } from 'lucide-react';
 
-const API_URL = 'https://sonimusic-1.onrender.com';
+import { API_URL } from '../lib/api';
 
 const Comments = ({ songId }) => {
   const { user, token, isAuthenticated } = useAuth();
@@ -20,8 +20,6 @@ const Comments = ({ songId }) => {
   const getProfilePic = (commentUser) => {
     if (!commentUser) return '/images/artists/default.jpg';
     const emailMap = {
-      'contact@sonimusic.online': '/images/artists/demba-tandia.jpg',
-      'demba.tandia@sonimusic.online': '/images/artists/demba-tandia.jpg',
       'jkeria@sonimusic.online': '/images/artists/jkeria.jpg',
       'david.soni@sonimusic.online': '/images/artists/david-soni.jpg',
       'lass.ko@sonimusic.online': '/images/artists/lass-ko.jpg',

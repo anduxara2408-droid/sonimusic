@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { Resend } from 'resend';
 import pkg from 'pg';
 import { ensureSchema } from './db-init.js';
+import { registerFeatureRoutes, FEATURES_SCHEMA_SQL } from './features.js';
 const { Pool } = pkg;
 
 const app = express();
@@ -255,7 +256,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-  origin: ['https://sonimusic.online', 'http://localhost:5173', 'https://sonimusic-1.onrender.com'],
+  origin: ['https://sonimusic.online', 'https://www.sonimusic.online', 'https://sonimusic-web.onrender.com', 'http://localhost:5173', 'https://sonimusic-1.onrender.com'],
   credentials: true
 }));
 app.use(express.json({ limit: '1mb' }));
@@ -702,15 +703,8 @@ app.get('/api/artists/:id', async (req, res) => {
 
 app.get('/api/albums', async (req, res) => {
   try {
-    // Les albums restent écrits en dur ; l'identifiant de l'artiste est lu en base.
-    const dembaResult = await pool.query(
-      `SELECT id FROM "User" WHERE role = 'ARTIST' AND "artistName" = 'Demba Tandia' ORDER BY id LIMIT 1`
-    );
-    const dembaId = dembaResult.rows[0]?.id ?? 1;
-    const albums = [
-      { id: 1, title: "Fii Siire", artistId: dembaId, artist: { id: dembaId, name: "Demba Tandia" }, year: 2022, coverArt: "/images/albums/fii-siire.jpg", description: "Album Fii Siire de Demba Tandia", songs: [1,2,3,4,5,6,7,8,9,10] },
-      { id: 2, title: "Bataaxe", artistId: dembaId, artist: { id: dembaId, name: "Demba Tandia" }, year: 2023, coverArt: "/images/albums/bataaxe.jpg", description: "Album Bataaxe de Demba Tandia", songs: [11,12,13,14,15,16,17,18] }
-    ];
+    // Aucun album publié pour l'instant (les albums seront gérés par les artistes et labels).
+    const albums = [];
     res.json(albums);
   } catch (error) {
     console.error('Erreur récupération albums:', error);
@@ -805,11 +799,11 @@ app.put('/api/users/profile', authenticateToken, async (req, res) => {
 
 app.get('/api/favorites/my-favorites', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT f.*, s.* FROM "Favorite" f JOIN "Song" s ON f."songId" = s.id
-      WHERE f."userId" = $1 ORDER BY f."createdAt" DESC
+    const result = await pool.query(`${SONG_SELECT}
+      JOIN "Favorite" f ON f."songId" = s.id
+      WHERE f."userId" = $1 AND s.status = 'ACCEPTED' ORDER BY f."createdAt" DESC
     `, [req.user.id]);
-    res.json(result.rows);
+    res.json(result.rows.map(withArtist));
   } catch (error) {
     console.error('Erreur favoris:', error);
     res.status(500).json({ error: 'Erreur lors de la récupération des favoris' });
@@ -818,7 +812,10 @@ app.get('/api/favorites/my-favorites', authenticateToken, async (req, res) => {
 
 app.post('/api/favorites/toggle', authenticateToken, async (req, res) => {
   try {
-    const { songId } = req.body || {};
+    const songId = toPositiveInt(req.body?.songId);
+    if (!songId) return res.status(400).json({ error: 'songId invalide' });
+    const songCheck = await pool.query(`SELECT id FROM "Song" WHERE id = $1 AND status = 'ACCEPTED'`, [songId]);
+    if (songCheck.rows.length === 0) return res.status(404).json({ error: 'Musique non trouvée' });
     const existing = await pool.query('SELECT * FROM "Favorite" WHERE "userId" = $1 AND "songId" = $2', [req.user.id, songId]);
     if (existing.rows.length > 0) {
       await pool.query('DELETE FROM "Favorite" WHERE "userId" = $1 AND "songId" = $2', [req.user.id, songId]);
@@ -1067,6 +1064,13 @@ app.post('/api/admin/songs/:id/reject', authenticateToken, isAdmin, async (req, 
 });
 
 // ============================================================
+// FONCTIONNALITÉS COMMUNAUTAIRES ET CLASSEMENTS
+// ============================================================
+registerFeatureRoutes(app, {
+  pool, authenticateToken, optionalAuth, rateLimit, SONG_SELECT, withArtist, jwtSecret: JWT_SECRET
+});
+
+// ============================================================
 // GESTIONNAIRE D'ERREURS FINAL (JSON)
 // ============================================================
 // eslint-disable-next-line no-unused-vars
@@ -1108,6 +1112,7 @@ app.listen(PORT, () => {
       .then(() => {
         console.log('🗄️ Base de données : ✅ connectée');
         return ensureSchema(pool)
+          .then(() => pool.query(FEATURES_SCHEMA_SQL))
           .then(() => console.log('🗄️ Schéma : ✅ tables vérifiées'))
           .catch((err) => console.error('🗄️ Schéma : ❌ échec de l\'initialisation -', err.code || err.message));
       })

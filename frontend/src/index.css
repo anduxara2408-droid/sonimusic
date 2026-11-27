@@ -247,3 +247,76 @@
     background-position: -200% 0;
   }
 }
+
+/* ===== MISE EN PAGE MOBILE : jamais de défilement horizontal ===== */
+html, body, #root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+body {
+  background: #0b0b0b;
+  overscroll-behavior-x: none;
+}
+img, video, iframe {
+  max-width: 100%;
+}
+input, select, textarea {
+  font-size: 16px; /* évite le zoom automatique sur iPhone */
+}
+@media (min-width: 768px) {
+  input, select, textarea { font-size: inherit; }
+}
+html.desktop-mode body {
+  min-width: 1280px;
+}
+
+/* ===== BARRE DE PROGRESSION DU LECTEUR ===== */
+.player-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  background: linear-gradient(to right, #f59e0b var(--pct, 0%), rgba(255, 255, 255, 0.15) var(--pct, 0%));
+  cursor: pointer;
+  outline: none;
+}
+.player-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: #fff;
+}
+.player-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 9999px;
+  background: #fff;
+}
+
+/* ===== CARROUSELS ANIMÉS ===== */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee 40s linear infinite;
+}
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+@keyframes scroll-up {
+  from { transform: translateY(0); }
+  to { transform: translateY(-50%); }
+}
+@keyframes scroll-down {
+  from { transform: translateY(-50%); }
+  to { transform: translateY(0); }
+}
+.animate-scroll-up { animation: scroll-up 30s linear infinite; }
+.animate-scroll-down { animation: scroll-down 30s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track, .animate-scroll-up, .animate-scroll-down { animation: none; }
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
