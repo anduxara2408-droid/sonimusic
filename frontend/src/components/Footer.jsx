@@ -1,60 +1,75 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Monitor, Smartphone } from 'lucide-react';
+import { openCookieSettings } from './CookieConsent';
+import { isDesktopMode, setDesktopMode } from '../lib/desktopMode';
 
-function Footer() {
+const columns = [
+  {
+    title: 'Découvrir',
+    links: [
+      { to: '/top', label: 'Classements' },
+      { to: '/discover', label: 'Tous les titres' },
+      { to: '/artists', label: 'Artistes' },
+      { to: '/radio', label: 'Radio 24h/24' },
+    ],
+  },
+  {
+    title: 'SONIMUSIC',
+    links: [
+      { to: '/about', label: 'À propos' },
+      { to: '/artistes-labels', label: 'Artistes & labels' },
+      { to: '/contact', label: 'Service client & réclamations' },
+    ],
+  },
+  {
+    title: 'Informations légales',
+    links: [
+      { to: '/cgu', label: "Conditions d'utilisation" },
+      { to: '/mentions', label: 'Mentions légales' },
+      { to: '/confidentialite', label: 'Confidentialité' },
+      { to: '/cookies', label: 'Politique cookies' },
+    ],
+  },
+];
+
+const Footer = () => {
+  const [desktop, setDesktop] = useState(isDesktopMode());
+  const toggleDesktop = () => {
+    setDesktopMode(!desktop);
+    setDesktop(!desktop);
+  };
+
   return (
-    <footer className="bg-[#0a0a0a] border-t border-gray-800/50 py-8 mt-auto">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {/* Brand */}
-          <div>
-            <h3 className="text-lg font-bold text-[#c9a25c] mb-3">SONIMUSIC</h3>
-            <p className="text-gray-400 text-sm">
-              La plateforme qui valorise les artistes africains.
-            </p>
-            <p className="text-gray-500 text-xs mt-2">
-              © 2026 SONIMUSIC. Tous droits réservés.
-            </p>
-          </div>
-
-          {/* Explorer */}
-          <div>
-            <h4 className="text-white font-semibold text-sm mb-3">Explorer</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link to="/discover" className="text-gray-400 hover:text-[#c9a25c] transition-colors">Découvrir</Link></li>
-              <li><Link to="/artists" className="text-gray-400 hover:text-[#c9a25c] transition-colors">Artistes</Link></li>
-              <li><Link to="/albums" className="text-gray-400 hover:text-[#c9a25c] transition-colors">Albums</Link></li>
-              <li><Link to="/radio" className="text-gray-400 hover:text-[#c9a25c] transition-colors">Radio</Link></li>
-            </ul>
-          </div>
-
-          {/* Légal */}
-          <div>
-            <h4 className="text-white font-semibold text-sm mb-3">Légal</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link to="/cgu" className="text-gray-400 hover:text-[#c9a25c] transition-colors">CGU</Link></li>
-              <li><Link to="/mentions" className="text-gray-400 hover:text-[#c9a25c] transition-colors">Mentions légales</Link></li>
-              <li><Link to="/contact" className="text-gray-400 hover:text-[#c9a25c] transition-colors">Contact</Link></li>
-            </ul>
-          </div>
-
-          {/* Social */}
-          <div>
-            <h4 className="text-white font-semibold text-sm mb-3">Suivez-nous</h4>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-[#c9a25c] transition-colors text-2xl">📸</a>
-              <a href="#" className="text-gray-400 hover:text-[#c9a25c] transition-colors text-2xl">🐦</a>
-              <a href="#" className="text-gray-400 hover:text-[#c9a25c] transition-colors text-2xl">📘</a>
-              <a href="#" className="text-gray-400 hover:text-[#c9a25c] transition-colors text-2xl">🎵</a>
-            </div>
-            <p className="text-gray-500 text-xs mt-4">
-              contact@sonimusic.online
-            </p>
-          </div>
+    <footer className="mt-16 border-t border-white/10 px-4 pb-8 pt-10 sm:px-6">
+      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 sm:grid-cols-4">
+        <div className="col-span-2 sm:col-span-1">
+          <Link to="/" className="text-xl font-black tracking-tight text-white">SONI<span className="text-amber-400">MUSIC</span></Link>
+          <p className="mt-3 text-sm text-gray-400">Les prochaines tendances de la musique africaine sont d'abord sur SONIMUSIC.</p>
         </div>
+        {columns.map((col) => (
+          <div key={col.title}>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500">{col.title}</h3>
+            <ul className="mt-3 space-y-2">
+              {col.links.map((l) => (
+                <li key={l.to}><Link to={l.to} className="text-sm text-gray-300 hover:text-white">{l.label}</Link></li>
+              ))}
+              {col.title === 'Informations légales' && (
+                <li><button onClick={openCookieSettings} className="text-left text-sm text-gray-300 hover:text-white">Gestionnaire de cookies</button></li>
+              )}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <div className="mx-auto mt-10 flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 text-xs text-gray-500 sm:flex-row">
+        <p>© {new Date().getFullYear()} SONIMUSIC · Langue : Français</p>
+        <button onClick={toggleDesktop} className="flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-gray-300 hover:bg-white/10">
+          {desktop ? <Smartphone className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
+          {desktop ? 'Revenir à la version mobile' : 'Version ordinateur'}
+        </button>
       </div>
     </footer>
   );
-}
+};
 
 export default Footer;

@@ -26,7 +26,11 @@ import Discover from './pages/Discover';
 import ArtistProfile from './pages/ArtistProfile';
 import About from './pages/About';
 import Albums from './pages/Albums';
-import CollaborativePlaylist from './pages/CollaborativePlaylist';
+import SongPage from './pages/SongPage';
+import Feed from './pages/Feed';
+import { Confidentialite, Cookies, ArtistesLabels } from './pages/LegalPages';
+import { PlayerProvider } from './context/PlayerContext';
+import { LikesProvider } from './context/LikesContext';
 import Library from './pages/Library';
 import LikedSongs from './pages/LikedSongs';
 import Notifications from './pages/Notifications';
@@ -81,6 +85,8 @@ function App() {
   return (
     <NotificationProvider>
       <AuthProvider>
+       <LikesProvider>
+       <PlayerProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Layout><Home /></Layout>} />
@@ -94,7 +100,11 @@ function App() {
             <Route path="/confirm-email-change" element={<Layout><ConfirmEmailChange /></Layout>} />
             <Route path="/about" element={<Layout><About /></Layout>} />
             <Route path="/albums" element={<Layout><Albums /></Layout>} />
-            <Route path="/collab" element={<Layout><CollaborativePlaylist /></Layout>} />
+            <Route path="/feed" element={<Layout><Feed /></Layout>} />
+            <Route path="/song/:id" element={<Layout><SongPage /></Layout>} />
+            <Route path="/confidentialite" element={<Layout><Confidentialite /></Layout>} />
+            <Route path="/cookies" element={<Layout><Cookies /></Layout>} />
+            <Route path="/artistes-labels" element={<Layout><ArtistesLabels /></Layout>} />
             <Route path="/notifications" element={<Layout><Notifications /></Layout>} />
             <Route path="/radio" element={<Layout><Radio /></Layout>} />
             <Route path="/search" element={<Layout><Search /></Layout>} />
@@ -126,6 +136,8 @@ function App() {
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </BrowserRouter>
+       </PlayerProvider>
+       </LikesProvider>
       </AuthProvider>
     </NotificationProvider>
   );

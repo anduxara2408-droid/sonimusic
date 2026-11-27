@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import logo from '/logo.jpeg';
+import PasswordInput from '../components/PasswordInput';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -59,8 +60,7 @@ function Login() {
 
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">Mot de passe</label>
-            <input
-              type="password"
+            <PasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-[#d4af37] outline-none transition-all"

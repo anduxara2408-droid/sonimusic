@@ -17,8 +17,6 @@ const UserProfile = () => {
     if (!u) return '/images/artists/default.jpg';
     if (u.profilePic) return u.profilePic;
     const emailMap = {
-      'contact@sonimusic.online': '/images/artists/demba-tandia.jpg',
-      'demba.tandia@sonimusic.online': '/images/artists/demba-tandia.jpg',
       'jkeria@sonimusic.online': '/images/artists/jkeria.jpg',
       'david.soni@sonimusic.online': '/images/artists/david-soni.jpg',
       'lass.ko@sonimusic.online': '/images/artists/lass-ko.jpg',

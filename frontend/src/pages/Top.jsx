@@ -1,129 +1,72 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Play, Trophy } from 'lucide-react';
+import api from '../lib/api';
+import { usePlayer } from '../context/PlayerContext';
+import { ArtistCard, SectionTitle, SongRow } from '../components/SongItems';
 
-function Top() {
-  const [topSongs, setTopSongs] = useState([]);
-  const [topArtists, setTopArtists] = useState([]);
+const periods = [
+  { id: 'day', label: "Aujourd'hui" },
+  { id: 'week', label: 'Cette semaine' },
+  { id: 'month', label: 'Ce mois' },
+  { id: 'all', label: 'Depuis toujours' },
+];
+
+const Top = () => {
+  const { playSong } = usePlayer();
   const [period, setPeriod] = useState('week');
-  const [loading, setLoading] = useState(true);
+  const [songs, setSongs] = useState(null);
+  const [artists, setArtists] = useState([]);
 
   useEffect(() => {
-    // Simuler des données
-    setTopSongs([
-      { id: 1, title: 'Kankan', artist: 'Demba Tandia', plays: 1542, cover: '/images/demba-tandia.jpg' },
-      { id: 2, title: 'Fii Sire', artist: 'Demba Tandia', plays: 1234, cover: '/images/demba-tandia.jpg' },
-      { id: 3, title: 'Fakoly', artist: 'Demba Tandia', plays: 987, cover: '/images/demba-tandia.jpg' },
-      { id: 4, title: 'Kannijo', artist: 'Demba Tandia', plays: 876, cover: '/images/demba-tandia.jpg' },
-      { id: 5, title: 'Daaru bara', artist: 'Demba Tandia', plays: 765, cover: '/images/demba-tandia.jpg' },
-    ]);
-    setTopArtists([
-      { id: 1, name: 'Demba Tandia', genre: 'Soninké', plays: 5432, image: '/images/demba-tandia.jpg' },
-    ]);
-    setLoading(false);
+    setSongs(null);
+    api.get('/api/charts/top-songs', { params: { period, limit: 50 } }).then(({ data }) => setSongs(data.songs || [])).catch(() => setSongs([]));
+    api.get('/api/charts/artists', { params: { period: period === 'all' ? 'month' : period, limit: 12 } }).then(({ data }) => setArtists(data.artists || [])).catch(() => setArtists([]));
   }, [period]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0c0b0a] flex items-center justify-center">
-        <div className="text-white">Chargement...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-[#0c0b0a] py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        
-        {/* En-tête */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white">🏆 Top SONIMUSIC</h1>
-          <p className="text-gray-400 mt-2">Les morceaux et artistes les plus écoutés</p>
-        </div>
-
-        {/* Période */}
-        <div className="flex justify-center gap-4 mb-8">
-          <button
-            onClick={() => setPeriod('week')}
-            className={`px-6 py-2 rounded-full font-medium transition-all ${
-              period === 'week' 
-                ? 'bg-[#c9a25c] text-black' 
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            Cette semaine
-          </button>
-          <button
-            onClick={() => setPeriod('month')}
-            className={`px-6 py-2 rounded-full font-medium transition-all ${
-              period === 'month' 
-                ? 'bg-[#c9a25c] text-black' 
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            Ce mois
-          </button>
-          <button
-            onClick={() => setPeriod('all')}
-            className={`px-6 py-2 rounded-full font-medium transition-all ${
-              period === 'all' 
-                ? 'bg-[#c9a25c] text-black' 
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            Tous les temps
-          </button>
-        </div>
-
-        {/* Top Morceaux */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold text-white mb-4">🎵 Top Morceaux</h2>
-          <div className="bg-gray-900/30 rounded-xl overflow-hidden border border-gray-800/50">
-            {topSongs.map((song, index) => (
-              <div 
-                key={song.id}
-                className={`flex items-center justify-between py-3 px-6 hover:bg-gray-800/50 transition-all ${
-                  index !== topSongs.length - 1 ? 'border-b border-gray-800/30' : ''
-                }`}
-              >
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <span className={`text-lg font-bold w-8 text-center ${
-                    index === 0 ? 'text-[#c9a25c]' : 'text-gray-500'
-                  }`}>
-                    #{index + 1}
-                  </span>
-                  <img src={song.cover} alt={song.title} className="w-12 h-12 rounded object-cover" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-white font-medium truncate">{song.title}</p>
-                    <p className="text-gray-400 text-sm truncate">{song.artist}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 flex-shrink-0">
-                  <span className="text-gray-500 text-sm">▶️ {song.plays}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Top Artistes */}
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-4">⭐ Top Artistes</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {topArtists.map((artist) => (
-              <Link key={artist.id} to={`/artist/${artist.id}`} className="bg-gray-900/50 rounded-xl p-6 text-center hover:bg-gray-800 transition-all border border-gray-800/50">
-                <div className="w-24 h-24 mx-auto rounded-full bg-gray-800 ring-2 ring-gray-700 overflow-hidden">
-                  <img src={artist.image} alt={artist.name} className="w-full h-full object-cover" />
-                </div>
-                <p className="text-white font-semibold mt-3">{artist.name}</p>
-                <p className="text-gray-400 text-sm">{artist.genre}</p>
-                <p className="text-[#c9a25c] text-sm mt-1">▶️ {artist.plays} écoutes</p>
-              </Link>
-            ))}
-          </div>
-        </div>
+    <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
+      <div className="flex items-center gap-3">
+        <Trophy className="h-8 w-8 text-amber-400" />
+        <h1 className="text-3xl font-black text-white">Classements</h1>
       </div>
+      <p className="mt-2 text-sm text-gray-400">Calculés automatiquement à partir des vraies écoutes (une écoute compte après 30 secondes).</p>
+
+      <div className="no-scrollbar mt-6 flex gap-2 overflow-x-auto pb-1">
+        {periods.map((p) => (
+          <button key={p.id} onClick={() => setPeriod(p.id)} className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${period === p.id ? 'bg-white text-black' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {artists.length > 0 && (
+        <section className="mt-8">
+          <SectionTitle title="Top artistes" />
+          <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-6">
+            {artists.map((a, i) => <ArtistCard key={a.id} artist={a} badge={`#${i + 1} · ${a.plays} écoutes`} />)}
+          </div>
+        </section>
+      )}
+
+      <section className="mt-8">
+        <SectionTitle
+          title="Top titres"
+          action={songs?.length ? (
+            <button onClick={() => playSong(songs[0], songs)} className="flex flex-shrink-0 items-center gap-2 rounded-full bg-amber-500 px-4 py-2 text-sm font-bold text-black hover:bg-amber-400">
+              <Play className="h-4 w-4" fill="currentColor" /> Tout écouter
+            </button>
+          ) : null}
+        />
+        {songs === null ? (
+          <div className="space-y-2">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-14 animate-pulse rounded-xl bg-white/5" />)}</div>
+        ) : songs.length === 0 ? (
+          <p className="text-sm text-gray-500">Aucun titre pour cette période.</p>
+        ) : (
+          <div>{songs.map((s, i) => <SongRow key={s.id} song={s} list={songs} rank={i + 1} />)}</div>
+        )}
+      </section>
     </div>
   );
-}
+};
 
 export default Top;
