@@ -1,105 +1,52 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { MailCheck } from 'lucide-react';
+import api from '../lib/api';
+import { Alert, AuthShell, Field, inputClass, SubmitButton } from '../components/AuthShell';
 
-function ForgotPassword() {
+const ForgotPassword = () => {
   const [email, setEmail] = useState('');
-  const [message, setMessage] = useState('');
+  const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setMessage('');
     setLoading(true);
-
     try {
-      const response = await axios.post('https://sonimusic-1.onrender.com/api/auth/forgot-password', {
-        email
-      });
-
-      if (response.data.success) {
-        setSent(true);
-        setMessage('Un email de réinitialisation vous a été envoyé 📧');
-      }
-    } catch (error) {
-      setError(error.response?.data?.error || 'Erreur lors de l\'envoi');
+      await api.post('/api/auth/forgot-password', { email: email.trim() });
+      setSent(true);
+    } catch (err) {
+      setError(err.response?.data?.error || "L'envoi a échoué. Réessaie dans quelques minutes.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-      <div className="bg-gray-900/50 rounded-2xl p-8 max-w-md w-full border border-gray-800/50">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-white">🔑 Mot de passe oublié</h1>
-          <p className="text-gray-400 text-sm mt-2">
-            {sent 
-              ? 'Vérifiez votre boîte mail 📧' 
-              : 'Entrez votre email pour recevoir un lien de réinitialisation'
-            }
-          </p>
+    <AuthShell
+      title="Mot de passe oublié"
+      subtitle={sent ? undefined : 'Indique ton e-mail : nous t’envoyons un lien pour choisir un nouveau mot de passe.'}
+      footer={<Link to="/login" className="font-semibold text-amber-400 hover:underline">Retour à la connexion</Link>}
+    >
+      {sent ? (
+        <div className="text-center">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/15"><MailCheck className="h-8 w-8 text-amber-400" /></span>
+          <p className="mt-5 text-gray-300">Si un compte existe avec cette adresse, un lien vient d'être envoyé. Il est valable 1 heure.</p>
+          <p className="mt-3 text-sm text-gray-500">Pense à regarder dans les spams.</p>
         </div>
-
-        {error && (
-          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 text-red-400 text-sm text-center mb-4">
-            {error}
-          </div>
-        )}
-
-        {message && (
-          <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-3 text-green-400 text-sm text-center mb-4">
-            {message}
-          </div>
-        )}
-
-        {!sent ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-[#d4af37] outline-none transition-all"
-                placeholder="exemple@email.com"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-[#d4af37] text-black font-semibold rounded-lg hover:bg-opacity-80 transition-all disabled:opacity-50"
-            >
-              {loading ? 'Envoi en cours...' : 'Envoyer le lien'}
-            </button>
-          </form>
-        ) : (
-          <div className="text-center space-y-4">
-            <p className="text-gray-400 text-sm">
-              Si un compte existe avec cet email, vous recevrez un lien de réinitialisation.
-            </p>
-            <Link 
-              to="/login" 
-              className="block w-full py-3 bg-[#d4af37] text-black font-semibold rounded-lg hover:bg-opacity-80 transition-all"
-            >
-              Retour à la connexion
-            </Link>
-          </div>
-        )}
-
-        <div className="text-center mt-4">
-          <Link to="/login" className="text-gray-400 hover:text-white text-sm transition-colors">
-            ← Retour à la connexion
-          </Link>
-        </div>
-      </div>
-    </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && <Alert>{error}</Alert>}
+          <Field label="Adresse e-mail">
+            <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} placeholder="toi@exemple.com" />
+          </Field>
+          <SubmitButton loading={loading}>Envoyer le lien</SubmitButton>
+        </form>
+      )}
+    </AuthShell>
   );
-}
+};
 
 export default ForgotPassword;

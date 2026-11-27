@@ -7,6 +7,8 @@ import { Resend } from 'resend';
 import pkg from 'pg';
 import { ensureSchema } from './db-init.js';
 import { registerFeatureRoutes, FEATURES_SCHEMA_SQL } from './features.js';
+import { registerStudioRoutes } from './studio.js';
+import { registerSupportRoutes, SUPPORT_SCHEMA_SQL } from './support.js';
 const { Pool } = pkg;
 
 const app = express();
@@ -1069,6 +1071,11 @@ app.post('/api/admin/songs/:id/reject', authenticateToken, isAdmin, async (req, 
 registerFeatureRoutes(app, {
   pool, authenticateToken, optionalAuth, rateLimit, SONG_SELECT, withArtist, jwtSecret: JWT_SECRET
 });
+registerStudioRoutes(app, { pool, authenticateToken, SONG_SELECT, withArtist, rateLimit });
+registerSupportRoutes(app, {
+  pool, optionalAuth, authenticateToken, rateLimit, sendEmail, escapeHtml, normalizeEmail, isValidEmail,
+  supportEmail: process.env.SUPPORT_EMAIL || 'contact@sonimusic.online'
+});
 
 // ============================================================
 // GESTIONNAIRE D'ERREURS FINAL (JSON)
@@ -1112,7 +1119,7 @@ app.listen(PORT, () => {
       .then(() => {
         console.log('🗄️ Base de données : ✅ connectée');
         return ensureSchema(pool)
-          .then(() => pool.query(FEATURES_SCHEMA_SQL))
+          .then(() => pool.query(FEATURES_SCHEMA_SQL + SUPPORT_SCHEMA_SQL))
           .then(() => console.log('🗄️ Schéma : ✅ tables vérifiées'))
           .catch((err) => console.error('🗄️ Schéma : ❌ échec de l\'initialisation -', err.code || err.message));
       })

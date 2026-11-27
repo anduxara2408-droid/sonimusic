@@ -57,7 +57,7 @@ const AdminAddArtist = () => {
         }
       });
 
-      setSuccess('✅ Artiste ajouté avec succès !');
+      setSuccess('Artiste ajouté avec succès !');
       setTimeout(() => {
         setFormData({ name: '', artistName: '', bio: '', country: '', genre: '', socials: '', instagram: '', twitter: '', facebook: '' });
         setProfilePic(null);
@@ -65,7 +65,7 @@ const AdminAddArtist = () => {
         navigate('/admin/artists');
       }, 2000);
     } catch (error) {
-      setError('❌ Erreur lors de l\'ajout');
+      setError('Erreur lors de l\'ajout');
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,7 @@ const AdminAddArtist = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6 text-white">👨‍🎤 Ajouter un artiste</h1>
+      <h1 className="text-2xl font-bold mb-6 text-white">Ajouter un artiste</h1>
       <div className="bg-[#1e1e1e] rounded-lg p-6 max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -142,21 +142,21 @@ const AdminAddArtist = () => {
                 value={formData.instagram}
                 onChange={(e) => setFormData({...formData, instagram: e.target.value})}
                 className="w-full bg-[#2a2a2a] border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-orange-500 outline-none"
-                placeholder="📸 Instagram (URL)"
+                placeholder="Instagram (URL)"
               />
               <input
                 type="text"
                 value={formData.twitter}
                 onChange={(e) => setFormData({...formData, twitter: e.target.value})}
                 className="w-full bg-[#2a2a2a] border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-orange-500 outline-none"
-                placeholder="🐦 Twitter (URL)"
+                placeholder="Twitter (URL)"
               />
               <input
                 type="text"
                 value={formData.facebook}
                 onChange={(e) => setFormData({...formData, facebook: e.target.value})}
                 className="w-full bg-[#2a2a2a] border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-orange-500 outline-none"
-                placeholder="📘 Facebook (URL)"
+                placeholder="Facebook (URL)"
               />
             </div>
           </div>
@@ -179,7 +179,7 @@ const AdminAddArtist = () => {
             disabled={loading}
             className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-black py-3 rounded-lg font-semibold hover:shadow-lg hover:shadow-orange-500/25 transition-all disabled:opacity-50"
           >
-            {loading ? '⏳ Ajout en cours...' : '👨‍🎤 Ajouter l\'artiste'}
+            {loading ? '⏳ Ajout en cours...' : 'Ajouter l\'artiste'}
           </button>
         </form>
       </div>

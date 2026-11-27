@@ -1,97 +1,56 @@
 import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
-import logo from '/logo.jpeg';
 import PasswordInput from '../components/PasswordInput';
+import { Alert, AuthShell, Field, inputClass, SubmitButton } from '../components/AuthShell';
 
-function Login() {
+const Login = () => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError(''); setInfo('');
     setLoading(true);
-    
-    const result = await login(email, password);
+    const result = await login(email.trim(), password);
     setLoading(false);
-    
     if (result.success) {
-      navigate('/dashboard');
+      navigate(location.state?.from || '/dashboard');
+    } else if (result.error?.includes('vérifier votre email')) {
+      setInfo("Ton adresse e-mail n'est pas encore vérifiée. Nous venons de t'envoyer un nouveau lien : ouvre-le puis reconnecte-toi.");
     } else {
-      if (result.error?.includes('vérifier votre email')) {
-        setError('Veuillez vérifier votre email avant de vous connecter.');
-      } else {
-        setError(result.error || 'Email ou mot de passe incorrect');
-      }
+      setError(result.error || 'E-mail ou mot de passe incorrect');
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0c0b0a] flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-gray-900/50 rounded-2xl p-8 border border-gray-800/50">
-        <div className="text-center mb-8">
-          <img src={logo} alt="SONIMUSIC" className="w-20 h-20 mx-auto object-contain" />
-          <h1 className="text-3xl font-bold text-[#d4af37] mt-4">Connexion</h1>
-          <p className="text-gray-400 mt-2">Retrouvez votre espace SONIMUSIC</p>
+    <AuthShell
+      title="Connexion"
+      subtitle="Content de te revoir sur SONIMUSIC."
+      footer={<>Pas encore de compte ? <Link to="/register" className="font-semibold text-amber-400 hover:underline">Créer un compte</Link></>}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <Alert>{error}</Alert>}
+        {info && <Alert type="info">{info}</Alert>}
+        <Field label="Adresse e-mail">
+          <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} placeholder="toi@exemple.com" />
+        </Field>
+        <Field label="Mot de passe">
+          <PasswordInput autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} placeholder="Ton mot de passe" />
+        </Field>
+        <div className="text-right">
+          <Link to="/forgot-password" className="text-sm text-gray-400 hover:text-amber-400">Mot de passe oublié ?</Link>
         </div>
-
-        {error && (
-          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 text-red-400 text-sm text-center mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-[#d4af37] outline-none transition-all"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Mot de passe</label>
-            <PasswordInput
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-[#d4af37] outline-none transition-all"
-              required
-            />
-            {/* Lien Mot de passe oublié */}
-            <div className="text-right mt-2">
-              <Link 
-                to="/forgot-password" 
-                className="text-sm text-[#d4af37] hover:underline hover:text-[#c9a25c] transition-colors"
-              >
-                Mot de passe oublié ?
-              </Link>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 bg-[#d4af37] text-black font-semibold rounded-lg hover:bg-opacity-80 transition-all disabled:opacity-50"
-          >
-            {loading ? 'Connexion...' : 'Se connecter'}
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-gray-400">
-          Pas encore de compte ? <Link to="/register" className="text-[#d4af37] hover:underline">S'inscrire</Link>
-        </p>
-      </div>
-    </div>
+        <SubmitButton loading={loading}>Se connecter</SubmitButton>
+      </form>
+    </AuthShell>
   );
-}
+};
 
 export default Login;

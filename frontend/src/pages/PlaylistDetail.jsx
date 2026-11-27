@@ -114,7 +114,7 @@ function PlaylistDetail() {
             onClick={deletePlaylist}
             className="text-red-400 hover:text-red-300 text-sm"
           >
-            🗑️ Supprimer la playlist
+            Supprimer la playlist
           </button>
         </div>
 
@@ -122,7 +122,7 @@ function PlaylistDetail() {
         <div className="bg-gray-900/50 rounded-xl p-6 mb-6">
           <div className="flex items-center gap-6">
             <div className="w-32 h-32 bg-gradient-to-br from-[#d4af37]/30 to-[#d4af37]/10 rounded-2xl flex items-center justify-center text-5xl flex-shrink-0">
-              🎵
+              {null}
             </div>
             <div>
               <h1 className="text-3xl font-bold text-white">{playlist.name}</h1>
@@ -140,7 +140,7 @@ function PlaylistDetail() {
         <div className="bg-gray-900/30 rounded-xl overflow-hidden">
           {songList.length === 0 ? (
             <div className="text-center text-gray-400 py-12">
-              <p className="text-2xl mb-4">🎵</p>
+              <p className="text-2xl mb-4"></p>
               <p>Aucune musique dans cette playlist.</p>
               <Link to="/discover" className="text-[#d4af37] hover:underline mt-2 inline-block">
                 Ajouter des musiques

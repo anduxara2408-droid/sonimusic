@@ -90,7 +90,7 @@ function ProfileModal({ isOpen, onClose }) {
     // Si l'email a changé
     if (email !== user?.email) {
       if (!emailAvailable) {
-        setMessage('❌ Cet email est déjà utilisé');
+        setMessage('Cet email est déjà utilisé');
         return;
       }
       
@@ -107,14 +107,14 @@ function ProfileModal({ isOpen, onClose }) {
           { headers: { 'Authorization': `Bearer ${token}` } }
         );
 
-        setMessage('📧 Un email de confirmation a été envoyé à la nouvelle adresse.');
+        setMessage('Un email de confirmation a été envoyé à la nouvelle adresse.');
         setLoading(false);
         
         setTimeout(() => {
           onClose();
         }, 3000);
       } catch (error) {
-        setMessage('❌ ' + (error.response?.data?.error || 'Erreur lors de la demande'));
+        setMessage('' + (error.response?.data?.error || 'Erreur lors de la demande'));
         setLoading(false);
       }
       return;
@@ -123,7 +123,7 @@ function ProfileModal({ isOpen, onClose }) {
     // Si seul le nom change
     if (name !== user?.name) {
       if (!usernameAvailable) {
-        setMessage('❌ Ce nom est déjà utilisé');
+        setMessage('Ce nom est déjà utilisé');
         return;
       }
       
@@ -133,11 +133,11 @@ function ProfileModal({ isOpen, onClose }) {
       try {
         const updatedUser = { ...user, name };
         updateUser(updatedUser);
-        setMessage('✅ Nom mis à jour avec succès !');
+        setMessage('Nom mis à jour avec succès !');
         setLoading(false);
         setTimeout(() => onClose(), 1500);
       } catch (error) {
-        setMessage('❌ Erreur lors de la mise à jour');
+        setMessage('Erreur lors de la mise à jour');
         setLoading(false);
       }
     }
@@ -248,8 +248,8 @@ function ProfileModal({ isOpen, onClose }) {
 
           {message && (
             <div className={`text-sm text-center ${
-              message.includes('✅') ? 'text-green-400' : 
-              message.includes('📧') ? 'text-yellow-400' : 
+              /succès/i.test(message) ? 'text-green-400' : 
+              /envoyé/i.test(message) ? 'text-yellow-400' : 
               'text-red-400'
             }`}>
               {message}

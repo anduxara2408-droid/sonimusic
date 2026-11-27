@@ -40,12 +40,12 @@ function MySongs() {
       };
     } else if (song.status === 'ACCEPTED' && song.isVerified) {
       return {
-        label: '✅ Publié',
+        label: 'Publié',
         className: 'bg-green-500/20 text-green-500 border border-green-500/30'
       };
     } else if (song.status === 'REJECTED') {
       return {
-        label: '❌ Refusé',
+        label: 'Refusé',
         className: 'bg-red-500/20 text-red-500 border border-red-500/30'
       };
     } else if (song.status === 'ACCEPTED' && !song.isVerified) {

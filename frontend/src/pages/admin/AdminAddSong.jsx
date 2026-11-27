@@ -66,7 +66,7 @@ const AdminAddSong = () => {
         }
       });
 
-      setSuccess('✅ Musique ajoutée avec succès !');
+      setSuccess('Musique ajoutée avec succès !');
       setTimeout(() => {
         setFormData({ title: '', artistId: '', genre: '', description: '', credits: '', album: '' });
         setFiles({ audio: null, cover: null });
@@ -74,7 +74,7 @@ const AdminAddSong = () => {
         navigate('/admin/songs');
       }, 2000);
     } catch (error) {
-      setError('❌ Erreur lors de l\'ajout');
+      setError('Erreur lors de l\'ajout');
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,7 @@ const AdminAddSong = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6 text-white">🎵 Ajouter une musique</h1>
+      <h1 className="text-2xl font-bold mb-6 text-white">Ajouter une musique</h1>
       <div className="bg-[#1e1e1e] rounded-lg p-6 max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -189,7 +189,7 @@ const AdminAddSong = () => {
             disabled={loading}
             className="w-full bg-gradient-to-r from-orange-500 to-yellow-500 text-black py-3 rounded-lg font-semibold hover:shadow-lg hover:shadow-orange-500/25 transition-all disabled:opacity-50"
           >
-            {loading ? '⏳ Ajout en cours...' : '🎵 Ajouter la musique'}
+            {loading ? '⏳ Ajout en cours...' : 'Ajouter la musique'}
           </button>
         </form>
       </div>

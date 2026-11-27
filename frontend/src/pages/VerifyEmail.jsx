@@ -17,7 +17,7 @@ function VerifyEmail() {
       verifyEmail();
     } else {
       setStatus('error');
-      setMessage('🔗 Lien de vérification invalide');
+      setMessage('Lien de vérification invalide');
     }
   }, []);
 
@@ -30,14 +30,14 @@ function VerifyEmail() {
       
       if (response.data.verified) {
         setStatus('success');
-        setMessage('✅ Votre email a été vérifié avec succès !');
+        setMessage('Votre email a été vérifié avec succès !');
         setTimeout(() => {
           navigate('/login');
         }, 3000);
       }
     } catch (error) {
       setStatus('error');
-      setMessage(error.response?.data?.error || '❌ Erreur lors de la vérification');
+      setMessage(error.response?.data?.error || 'Erreur lors de la vérification');
     }
   };
 
@@ -58,7 +58,7 @@ function VerifyEmail() {
 
         {status === 'success' && (
           <>
-            <div className="text-6xl mb-4">🎉</div>
+            <div className="text-6xl mb-4"></div>
             <h2 className="text-2xl font-bold text-green-400">Email vérifié !</h2>
             <p className="text-gray-300 mt-2 text-sm">{message}</p>
             <p className="text-gray-400 text-sm mt-4">Vous allez être redirigé vers la page de connexion...</p>
@@ -70,7 +70,7 @@ function VerifyEmail() {
 
         {status === 'error' && (
           <>
-            <div className="text-6xl mb-4">❌</div>
+            <div className="text-6xl mb-4"></div>
             <h2 className="text-2xl font-bold text-red-400">Vérification échouée</h2>
             <p className="text-gray-300 mt-2 text-sm">{message}</p>
             <div className="mt-6 flex flex-col gap-3">

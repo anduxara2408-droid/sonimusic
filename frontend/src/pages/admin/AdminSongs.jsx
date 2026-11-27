@@ -20,7 +20,7 @@ function AdminSongs() {
       setSongs(response.data || []);
       setLoading(false);
     } catch (error) {
-      console.error('❌ Erreur:', error);
+      console.error('Erreur:', error);
       setLoading(false);
     }
   };
@@ -33,7 +33,7 @@ function AdminSongs() {
       });
       fetchSongs();
     } catch (error) {
-      console.error('❌ Erreur:', error);
+      console.error('Erreur:', error);
     }
   };
 
@@ -43,7 +43,7 @@ function AdminSongs() {
 
   return (
     <div className="bg-gray-900/50 rounded-2xl p-6 border border-gray-800/50">
-      <h1 className="text-2xl font-bold text-white mb-4">🎵 Gestion des musiques</h1>
+      <h1 className="text-2xl font-bold text-white mb-4">Gestion des musiques</h1>
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>

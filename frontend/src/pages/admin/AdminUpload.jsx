@@ -37,11 +37,11 @@ function AdminUpload() {
   const coverInputRef = useRef(null);
 
   const destinations = [
-    { id: 'home', label: '🏠 Accueil', desc: 'Apparaît dans les nouveautés' },
-    { id: 'albums', label: '💿 Albums', desc: 'Apparaît dans la section Albums' },
-    { id: 'ep', label: '📀 EP', desc: 'Apparaît dans la section EP' },
-    { id: 'library', label: '📚 Bibliothèque', desc: 'Apparaît dans la bibliothèque' },
-    { id: 'artist', label: '🎤 Artiste', desc: 'Apparaît dans le profil d\'un artiste' },
+    { id: 'home', label: 'Accueil', desc: 'Apparaît dans les nouveautés' },
+    { id: 'albums', label: 'Albums', desc: 'Apparaît dans la section Albums' },
+    { id: 'ep', label: 'EP', desc: 'Apparaît dans la section EP' },
+    { id: 'library', label: 'Bibliothèque', desc: 'Apparaît dans la bibliothèque' },
+    { id: 'artist', label: 'Artiste', desc: 'Apparaît dans le profil d\'un artiste' },
   ];
 
   const validateAudioFile = (file) => {
@@ -54,7 +54,7 @@ function AdminUpload() {
     if (file.size > maxSize) {
       return { valid: false, message: 'Le fichier audio dépasse 50 Mo' };
     }
-    return { valid: true, message: '✅ Fichier audio valide' };
+    return { valid: true, message: 'Fichier audio valide' };
   };
 
   const validateCoverFile = (file) => {
@@ -66,7 +66,7 @@ function AdminUpload() {
     if (file.size > maxSize) {
       return { valid: false, message: 'L\'image dépasse 5 Mo' };
     }
-    return { valid: true, message: '✅ Image valide' };
+    return { valid: true, message: 'Image valide' };
   };
 
   const handleFileChange = (e) => {
@@ -138,7 +138,7 @@ function AdminUpload() {
         }
       );
 
-      setSuccess('✅ Musique ajoutée avec succès !');
+      setSuccess('Musique ajoutée avec succès !');
       setFormData({ title: '', genre: '', description: '', author: '', producer: '', composer: '', destination: 'home', artistId: '' });
       setFiles({ audio: null, cover: null });
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -152,7 +152,7 @@ function AdminUpload() {
 
   return (
     <div className="bg-gray-900/50 rounded-2xl p-6 border border-gray-800/50">
-      <h1 className="text-2xl font-bold text-white mb-2">🎵 Ajouter une musique</h1>
+      <h1 className="text-2xl font-bold text-white mb-2">Ajouter une musique</h1>
       <p className="text-gray-400 mb-6">Upload et choisissez où la musique apparaîtra sur le site</p>
 
       {error && <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 text-red-400 text-sm mb-4">{error}</div>}

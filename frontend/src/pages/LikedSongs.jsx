@@ -67,7 +67,7 @@ function LikedSongs() {
   if (!user) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-6">
-        <h1 className="text-3xl font-bold text-white mb-4">❤️ Titres likés</h1>
+        <h1 className="text-3xl font-bold text-white mb-4">Titres likés</h1>
         <p className="text-gray-400 text-center mb-6">
           Connectez-vous pour voir vos titres favoris
         </p>
@@ -93,7 +93,7 @@ function LikedSongs() {
         {/* En-tête */}
         <div className="flex items-center gap-4 mb-8">
           <div className="w-20 h-20 bg-gradient-to-br from-[#d4af37]/30 to-[#d4af37]/10 rounded-2xl flex items-center justify-center text-4xl">
-            ❤️
+            {null}
           </div>
           <div>
             <h1 className="text-3xl font-bold text-white">Titres likés</h1>
@@ -104,7 +104,7 @@ function LikedSongs() {
         {/* Liste des titres likés */}
         {favorites.length === 0 ? (
           <div className="text-center text-gray-400 py-12">
-            <p className="text-2xl mb-4">🎵</p>
+            <p className="text-2xl mb-4"></p>
             <p>Aucun titre liké pour le moment.</p>
             <p className="text-sm mt-2">
               Parcourez la <Link to="/discover" className="text-[#d4af37] hover:underline">page de découverte</Link> pour en ajouter !
@@ -144,7 +144,7 @@ function LikedSongs() {
                     className="text-red-500 hover:text-red-400 transition-all text-sm"
                     title="Retirer des favoris"
                   >
-                    ❌
+                    Retirer
                   </button>
                 </div>
               </div>

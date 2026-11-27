@@ -17,7 +17,7 @@ function ConfirmEmailChange() {
       confirmChange();
     } else {
       setStatus('error');
-      setMessage('🔗 Lien invalide');
+      setMessage('Lien invalide');
     }
   }, []);
 
@@ -30,14 +30,14 @@ function ConfirmEmailChange() {
       
       if (response.data.success) {
         setStatus('success');
-        setMessage('✅ Email changé avec succès !');
+        setMessage('Email changé avec succès !');
         setTimeout(() => {
           navigate('/login');
         }, 3000);
       }
     } catch (error) {
       setStatus('error');
-      setMessage(error.response?.data?.error || '❌ Erreur lors de la confirmation');
+      setMessage(error.response?.data?.error || 'Erreur lors de la confirmation');
     }
   };
 
@@ -55,7 +55,7 @@ function ConfirmEmailChange() {
 
         {status === 'success' && (
           <>
-            <div className="text-6xl mb-4">✅</div>
+            <div className="text-6xl mb-4"></div>
             <h2 className="text-2xl font-bold text-green-400">Email changé !</h2>
             <p className="text-gray-300 mt-2">{message}</p>
             <p className="text-gray-400 text-sm mt-4">Vous allez être redirigé vers la page de connexion...</p>
@@ -64,7 +64,7 @@ function ConfirmEmailChange() {
 
         {status === 'error' && (
           <>
-            <div className="text-6xl mb-4">❌</div>
+            <div className="text-6xl mb-4"></div>
             <h2 className="text-2xl font-bold text-red-400">Confirmation échouée</h2>
             <p className="text-gray-300 mt-2">{message}</p>
           </>

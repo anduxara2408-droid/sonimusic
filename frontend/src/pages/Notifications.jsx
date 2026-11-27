@@ -16,9 +16,9 @@ function Notifications() {
 
   const getTypeIcon = (type) => {
     switch (type) {
-      case 'success': return '✅';
-      case 'error': return '❌';
-      case 'warning': return '⚠️';
+      case 'success': return '';
+      case 'error': return '';
+      case 'warning': return '';
       default: return 'ℹ️';
     }
   };
@@ -26,11 +26,11 @@ function Notifications() {
   return (
     <div className="min-h-screen bg-[#0c0b0a] py-8 px-4">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-white mb-6">🔔 Notifications</h1>
+        <h1 className="text-3xl font-bold text-white mb-6">Notifications</h1>
 
         {notifications.length === 0 ? (
           <div className="bg-gray-900/50 rounded-2xl p-12 text-center border border-gray-800/50">
-            <p className="text-6xl mb-4">🔔</p>
+            <p className="text-6xl mb-4"></p>
             <p className="text-gray-400">Aucune notification</p>
             <p className="text-gray-500 text-sm mt-2">Vous serez notifié des activités importantes</p>
           </div>
@@ -66,7 +66,7 @@ function Notifications() {
                     onClick={() => deleteNotification(notification.id)}
                     className="text-gray-500 hover:text-red-400"
                   >
-                    🗑️
+                    Supprimer
                   </button>
                 </div>
               </div>

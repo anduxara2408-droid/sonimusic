@@ -284,9 +284,9 @@ const AdminDashboard = () => {
                             song.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-400' :
                             'bg-red-500/20 text-red-400'
                           }`}>
-                            {song.status === 'ACCEPTED' ? '✅ Publiée' :
+                            {song.status === 'ACCEPTED' ? 'Publiée' :
                              song.status === 'PENDING' ? '⏳ En attente' :
-                             '❌ Refusée'}
+                             'Refusée'}
                           </span>
                         </td>
                         <td className="py-3 px-4">

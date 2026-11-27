@@ -1,148 +1,143 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import {
+  CheckCircle2, CircleHelp, CreditCard, FileWarning, Headset, Mail, MessageSquareWarning, Mic2, ShieldAlert, UserRound, Wrench,
+} from 'lucide-react';
+import api from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+import { Alert, Field, inputClass, SubmitButton } from '../components/AuthShell';
 
-function Contact() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    category: 'general',
-    message: ''
-  });
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+const categories = [
+  { id: 'question', icon: CircleHelp, label: 'Question générale' },
+  { id: 'compte', icon: UserRound, label: 'Mon compte' },
+  { id: 'paiement', icon: CreditCard, label: 'Paiement / achat' },
+  { id: 'reclamation', icon: MessageSquareWarning, label: 'Réclamation' },
+  { id: 'droits', icon: ShieldAlert, label: "Droits d'auteur" },
+  { id: 'artiste', icon: Mic2, label: 'Espace artiste / label' },
+  { id: 'technique', icon: Wrench, label: 'Problème technique' },
+  { id: 'autre', icon: FileWarning, label: 'Autre' },
+];
+
+const faq = [
+  { q: "Je n'ai pas reçu l'e-mail de confirmation", a: 'Regarde dans les spams ou « Promotions ». Tu peux aussi te reconnecter : un nouveau lien est envoyé automatiquement.' },
+  { q: 'Comment publier ma musique ?', a: "Crée un compte Artiste, puis ouvre l'Espace artiste et clique sur « Publier un titre »." },
+  { q: "Quelqu'un a publié mon son sans autorisation", a: "Choisis « Droits d'auteur », indique le lien ou le numéro du titre et ta preuve. Nous traitons ces demandes en priorité." },
+  { q: "J'ai payé mais je n'ai pas accès à mon achat", a: 'Choisis « Paiement / achat » et indique le numéro de commande et la référence de la transaction.' },
+];
+
+const Contact = () => {
+  const { user } = useAuth();
+  const [params] = useSearchParams();
+  const [form, setForm] = useState({ category: params.get('type') || 'question', name: '', email: '', subject: '', message: '', orderRef: '', songId: params.get('song') || '', website: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [ref, setRef] = useState('');
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  useEffect(() => {
+    if (user) setForm((f) => ({ ...f, name: f.name || user.name || '', email: f.email || user.email || '' }));
+  }, [user]);
+
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
-
+    setLoading(true);
     try {
-      const response = await axios.post(
-        'https://sonimusic-1.onrender.com/api/contact',
-        formData
-      );
-      if (response.data.success) {
-        setSubmitted(true);
-        setFormData({ name: '', email: '', category: 'general', message: '' });
-        setTimeout(() => setSubmitted(false), 5000);
-      }
-    } catch (error) {
-      setError(error.response?.data?.error || 'Erreur lors de l\'envoi du message');
+      const { data } = await api.post('/api/support/tickets', form);
+      setRef(data.ref);
+    } catch (err) {
+      setError(err.response?.data?.error || "L'envoi a échoué. Réessaie dans un instant.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-[#0c0b0a] text-white p-8 flex items-center justify-center">
-        <div className="max-w-md w-full bg-gray-900/50 rounded-2xl p-8 border border-gray-800/50 text-center">
-          <div className="text-6xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold text-green-400">Message envoyé !</h2>
-          <p className="text-gray-400 mt-2">Nous vous répondrons dans les plus brefs délais.</p>
-          <button
-            onClick={() => setSubmitted(false)}
-            className="mt-4 px-6 py-2 bg-[#c9a25c] text-black rounded-lg hover:bg-[#d4af37] transition-all"
-          >
-            Envoyer un autre message
-          </button>
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+      <div className="flex items-center gap-3">
+        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15"><Headset className="h-6 w-6 text-amber-400" /></span>
+        <div>
+          <h1 className="text-3xl font-black text-white">Service client & réclamations</h1>
+          <p className="text-sm text-gray-400">Une question, un problème, une réclamation : nous répondons sous 48 h ouvrées.</p>
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="min-h-screen bg-[#0c0b0a] text-white p-8">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-[#c9a25c] mb-6">Contactez-nous</h1>
-        
-        {error && (
-          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 text-red-400 text-sm text-center mb-4">
-            {error}
+      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px]">
+        <div className="rounded-3xl border border-white/10 bg-[#121212] p-5 sm:p-8">
+          {ref ? (
+            <div className="py-6 text-center">
+              <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-400" />
+              <h2 className="mt-4 text-2xl font-black text-white">Demande envoyée</h2>
+              <p className="mt-2 text-gray-300">Ton numéro de suivi :</p>
+              <p className="mt-1 text-2xl font-black tracking-wider text-amber-400">{ref}</p>
+              <p className="mt-4 text-sm text-gray-400">Une confirmation a été envoyée à {form.email}. Garde ce numéro pour toute relance.</p>
+              <button onClick={() => { setRef(''); setForm((f) => ({ ...f, subject: '', message: '', orderRef: '' })); }} className="mt-6 rounded-xl border border-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/5">Nouvelle demande</button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {error && <Alert>{error}</Alert>}
+              <div>
+                <p className="mb-2 text-sm font-medium text-gray-300">Type de demande</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {categories.map((c) => (
+                    <button key={c.id} type="button" onClick={() => setForm((f) => ({ ...f, category: c.id }))} aria-pressed={form.category === c.id}
+                      className={`flex flex-col items-start gap-2 rounded-2xl border p-3 text-left text-xs font-semibold transition ${form.category === c.id ? 'border-amber-500 bg-amber-500/10 text-white' : 'border-white/10 bg-white/[0.03] text-gray-300 hover:border-white/25'}`}>
+                      <c.icon className={`h-5 w-5 ${form.category === c.id ? 'text-amber-400' : 'text-gray-500'}`} />
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Nom"><input required minLength={2} maxLength={100} value={form.name} onChange={set('name')} className={inputClass} /></Field>
+                <Field label="E-mail de réponse"><input type="email" required value={form.email} onChange={set('email')} className={inputClass} /></Field>
+              </div>
+              <Field label="Objet"><input required minLength={3} maxLength={150} value={form.subject} onChange={set('subject')} className={inputClass} placeholder="Résume ta demande en quelques mots" /></Field>
+
+              {form.category === 'paiement' && (
+                <Field label="Numéro de commande ou référence de transaction" hint="Par exemple la référence Wave, Bankily ou Masrvi.">
+                  <input maxLength={60} value={form.orderRef} onChange={set('orderRef')} className={inputClass} />
+                </Field>
+              )}
+              {(form.category === 'droits' || form.category === 'reclamation') && (
+                <Field label="Numéro ou lien du titre concerné (facultatif)" hint="Le numéro figure à la fin de l'adresse de la page du titre (…/song/12).">
+                  <input maxLength={200} value={form.songId} onChange={set('songId')} className={inputClass} />
+                </Field>
+              )}
+
+              <Field label="Message" hint={form.category === 'droits' ? 'Explique pourquoi ce son t’appartient et indique tes preuves (date de création, contrat, lien vers la version originale…).' : undefined}>
+                <textarea required minLength={10} maxLength={5000} rows={6} value={form.message} onChange={set('message')} className={`${inputClass} resize-y`} placeholder="Décris ta demande avec le plus de détails possible" />
+              </Field>
+              <input type="text" name="website" value={form.website} onChange={set('website')} tabIndex={-1} autoComplete="off" className="hidden" aria-hidden="true" />
+
+              <SubmitButton loading={loading}>Envoyer ma demande</SubmitButton>
+              <p className="text-xs text-gray-500">En envoyant ce formulaire, tu acceptes que nous utilisions ces informations pour traiter ta demande (<Link to="/confidentialite" className="text-amber-400 hover:underline">confidentialité</Link>).</p>
+            </form>
+          )}
+        </div>
+
+        <aside className="space-y-4">
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+            <h2 className="font-bold text-white">Questions fréquentes</h2>
+            <div className="mt-3 divide-y divide-white/5">
+              {faq.map((f) => (
+                <details key={f.q} className="group py-3">
+                  <summary className="cursor-pointer list-none text-sm font-semibold text-gray-200 group-open:text-amber-400">{f.q}</summary>
+                  <p className="mt-2 text-sm text-gray-400">{f.a}</p>
+                </details>
+              ))}
+            </div>
           </div>
-        )}
-
-        <div className="bg-gray-900/50 rounded-xl p-6 border border-gray-800/50">
-          <p className="text-gray-400 text-sm mb-6">
-            Une question ? Une collaboration ? Un projet ? N'hésitez pas à nous contacter.
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-gray-300 text-sm font-medium mb-1">Nom complet *</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:border-[#c9a25c] outline-none transition-all"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-300 text-sm font-medium mb-1">Email *</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:border-[#c9a25c] outline-none transition-all"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-300 text-sm font-medium mb-1">Catégorie</label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:border-[#c9a25c] outline-none transition-all"
-              >
-                <option value="general">Général</option>
-                <option value="artist">Devenir artiste</option>
-                <option value="support">Support technique</option>
-                <option value="collaboration">Collaboration</option>
-                <option value="financial">Soutien financier</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-gray-300 text-sm font-medium mb-1">Message *</label>
-              <textarea
-                name="message"
-                rows="5"
-                value={formData.message}
-                onChange={handleChange}
-                className="w-full px-4 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white focus:border-[#c9a25c] outline-none transition-all"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-[#c9a25c] text-black font-semibold rounded-lg hover:bg-[#d4af37] transition-all disabled:opacity-50"
-            >
-              {loading ? 'Envoi en cours...' : 'Envoyer'}
-            </button>
-          </form>
-        </div>
-
-        <div className="mt-6 text-center space-y-2">
-          <p className="text-gray-400">📧 <a href="mailto:contact@sonimusic.online" className="hover:text-[#c9a25c] transition-all">contact@sonimusic.online</a></p>
-          <p className="text-gray-400">🇸🇳 <a href="tel:+221781234567" className="hover:text-[#c9a25c] transition-all">+221 78 123 45 67</a></p>
-          <p className="text-gray-400">🇲🇷 <a href="tel:+22245123456" className="hover:text-[#c9a25c] transition-all">+222 45 12 34 56</a></p>
-        </div>
+          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+            <h2 className="font-bold text-white">Nous écrire directement</h2>
+            <a href="mailto:contact@sonimusic.online" className="mt-3 flex items-center gap-2 text-sm text-gray-300 hover:text-amber-400"><Mail className="h-4 w-4" /> contact@sonimusic.online</a>
+          </div>
+        </aside>
       </div>
     </div>
   );
-}
+};
 
 export default Contact;

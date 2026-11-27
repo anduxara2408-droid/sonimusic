@@ -14,7 +14,7 @@ function Artists() {
         setArtists(response.data || []);
         setLoading(false);
       } catch (error) {
-        console.error('❌ Erreur:', error);
+        console.error('Erreur:', error);
         setError('Impossible de charger les artistes');
         setLoading(false);
       }
@@ -41,7 +41,7 @@ function Artists() {
   return (
     <div className="min-h-screen bg-[#0c0b0a] text-white p-8">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-[#c9a25c] mb-6">🎤 Artistes</h1>
+        <h1 className="text-3xl font-bold text-[#c9a25c] mb-6">Artistes</h1>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {artists.map((artist) => (
             <Link 
@@ -58,7 +58,7 @@ function Artists() {
               <p className="text-white font-medium">{artist.artistName || artist.name}</p>
               <p className="text-gray-400 text-sm">{artist.genre || 'Artiste Soninké'}</p>
               {artist.country && (
-                <p className="text-gray-500 text-xs mt-1">📍 {artist.country}</p>
+                <p className="text-gray-500 text-xs mt-1">{artist.country}</p>
               )}
             </Link>
           ))}

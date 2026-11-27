@@ -46,7 +46,7 @@ function Dashboard() {
         });
         setUserStats(prev => ({ ...prev, totalFavorites: favResponse.data?.length || 0 }));
       } catch (error) {
-        console.log('⚠️ Pas de favoris trouvés');
+        console.log('Pas de favoris trouvés');
         setUserStats(prev => ({ ...prev, totalFavorites: 0 }));
       }
 
@@ -57,12 +57,12 @@ function Dashboard() {
         });
         setUserStats(prev => ({ ...prev, totalPlaylists: playResponse.data?.length || 0 }));
       } catch (error) {
-        console.log('⚠️ Pas de playlists trouvées');
+        console.log('Pas de playlists trouvées');
         setUserStats(prev => ({ ...prev, totalPlaylists: 0 }));
       }
 
     } catch (error) {
-      console.error('❌ Erreur:', error);
+      console.error('Erreur:', error);
     } finally {
       setLoading(false);
     }
@@ -198,7 +198,7 @@ function Dashboard() {
 
         {/* Section découverte */}
         <div className="bg-gray-900/50 rounded-2xl p-6 border border-gray-800/50">
-          <h3 className="text-lg font-semibold text-white mb-4">🔥 Découvrir</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Découvrir</h3>
           <p className="text-gray-400 text-center py-4">
             Explorez les artistes et les musiques de la communauté Soninké
           </p>

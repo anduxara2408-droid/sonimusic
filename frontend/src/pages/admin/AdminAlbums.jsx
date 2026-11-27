@@ -86,7 +86,7 @@ const AdminAlbums = () => {
         }
       });
 
-      setSuccess('✅ Album ajouté avec succès !');
+      setSuccess('Album ajouté avec succès !');
       setTimeout(() => {
         setFormData({ title: '', artistId: '', year: new Date().getFullYear(), description: '', songs: [] });
         setCover(null);
@@ -95,7 +95,7 @@ const AdminAlbums = () => {
         fetchAlbums();
       }, 2000);
     } catch (error) {
-      setError('❌ Erreur lors de l\'ajout');
+      setError('Erreur lors de l\'ajout');
     } finally {
       setLoading(false);
     }
@@ -116,22 +116,22 @@ const AdminAlbums = () => {
       await axios.delete(`https://sonimusic-1.onrender.com/api/admin/albums/${albumId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      setSuccess('✅ Album supprimé');
+      setSuccess('Album supprimé');
       fetchAlbums();
     } catch (error) {
-      setError('❌ Erreur lors de la suppression');
+      setError('Erreur lors de la suppression');
     }
   };
 
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">💿 Gestion des albums</h1>
+        <h1 className="text-2xl font-bold text-white">Gestion des albums</h1>
         <button
           onClick={() => setShowForm(!showForm)}
           className="bg-orange-500 text-black px-4 py-2 rounded-lg hover:shadow-lg hover:shadow-orange-500/25 transition-all"
         >
-          {showForm ? '✖ Fermer' : '➕ Ajouter un album'}
+          {showForm ? '✖ Fermer' : 'Ajouter un album'}
         </button>
       </div>
 
@@ -223,7 +223,7 @@ const AdminAlbums = () => {
               disabled={loading}
               className="w-full bg-orange-500 text-black py-3 rounded-lg font-semibold hover:shadow-lg hover:shadow-orange-500/25 transition-all disabled:opacity-50"
             >
-              {loading ? '⏳ Ajout en cours...' : '💿 Créer l\'album'}
+              {loading ? '⏳ Ajout en cours...' : 'Créer l\'album'}
             </button>
           </form>
         </div>

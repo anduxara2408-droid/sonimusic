@@ -33,10 +33,10 @@ const AdminUsers = () => {
         { role: newRole },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
-      setSuccess(`✅ Rôle changé en ${newRole}`);
+      setSuccess(`Rôle changé en ${newRole}`);
       fetchUsers();
     } catch (error) {
-      setError('❌ Erreur lors du changement de rôle');
+      setError('Erreur lors du changement de rôle');
     }
   };
 
@@ -47,10 +47,10 @@ const AdminUsers = () => {
         {},
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
-      setSuccess(`✅ Utilisateur ${action === 'block' ? 'bloqué' : 'débloqué'}`);
+      setSuccess(`Utilisateur ${action === 'block' ? 'bloqué' : 'débloqué'}`);
       fetchUsers();
     } catch (error) {
-      setError('❌ Erreur lors de l\'action');
+      setError('Erreur lors de l\'action');
     }
   };
 
@@ -60,10 +60,10 @@ const AdminUsers = () => {
       await axios.delete(`https://sonimusic-1.onrender.com/api/admin/users/${userId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      setSuccess('✅ Utilisateur supprimé');
+      setSuccess('Utilisateur supprimé');
       fetchUsers();
     } catch (error) {
-      setError('❌ Erreur lors de la suppression');
+      setError('Erreur lors de la suppression');
     }
   };
 
@@ -73,7 +73,7 @@ const AdminUsers = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6 text-white">👥 Gestion des utilisateurs</h1>
+      <h1 className="text-2xl font-bold mb-6 text-white">Gestion des utilisateurs</h1>
       
       {error && <div className="text-red-400 text-sm bg-red-500/20 p-3 rounded-lg mb-4">{error}</div>}
       {success && <div className="text-green-400 text-sm bg-green-500/20 p-3 rounded-lg mb-4">{success}</div>}
@@ -107,10 +107,10 @@ const AdminUsers = () => {
                     onChange={(e) => changeRole(user.id, e.target.value)}
                     className="bg-[#2a2a2a] border border-gray-700 rounded-lg px-3 py-1 text-white text-sm focus:border-orange-500 outline-none"
                   >
-                    <option value="LISTENER">🎧 Auditeur</option>
-                    <option value="ARTIST">🎤 Artiste</option>
-                    <option value="ADMIN">👑 Admin</option>
-                    <option value="PREMIUM">⭐ Premium</option>
+                    <option value="LISTENER">Auditeur</option>
+                    <option value="ARTIST">Artiste</option>
+                    <option value="ADMIN">Admin</option>
+                    <option value="PREMIUM">Premium</option>
                   </select>
                 </td>
                 <td className="py-3 px-4">
@@ -119,7 +119,7 @@ const AdminUsers = () => {
                       ? 'bg-red-500/20 text-red-400' 
                       : 'bg-green-500/20 text-green-400'
                   }`}>
-                    {user.status === 'blocked' ? '🔒 Bloqué' : '✅ Actif'}
+                    {user.status === 'blocked' ? 'Bloqué' : 'Actif'}
                   </span>
                 </td>
                 <td className="py-3 px-4">
@@ -132,13 +132,13 @@ const AdminUsers = () => {
                           : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
                       }`}
                     >
-                      {user.status === 'blocked' ? '🔓 Débloquer' : '🔒 Bloquer'}
+                      {user.status === 'blocked' ? 'Débloquer' : 'Bloquer'}
                     </button>
                     <button
                       onClick={() => deleteUser(user.id)}
                       className="bg-red-500/20 text-red-400 px-3 py-1 rounded-lg text-xs hover:bg-red-500/30"
                     >
-                      🗑️
+                      Supprimer
                     </button>
                   </div>
                 </td>
