@@ -100,7 +100,7 @@ const UserProfile = () => {
                     to="/edit-profile" 
                     className="inline-block bg-orange-500 text-black px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-orange-400 transition-colors"
                   >
-                    ✏️ Modifier mon profil
+                    Modifier mon profil
                   </Link>
                 </div>
               )}

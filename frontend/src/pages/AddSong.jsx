@@ -54,7 +54,7 @@ function AddSong() {
       return { valid: false, message: 'Le fichier audio dépasse 50 Mo.' };
     }
     
-    return { valid: true, message: '✅ Fichier audio valide' };
+    return { valid: true, message: 'Fichier audio valide' };
   };
 
   const validateCoverFile = (file) => {
@@ -69,7 +69,7 @@ function AddSong() {
       return { valid: false, message: 'L\'image dépasse 5 Mo.' };
     }
     
-    return { valid: true, message: '✅ Image valide' };
+    return { valid: true, message: 'Image valide' };
   };
 
   const handleFileChange = (e) => {
@@ -150,12 +150,12 @@ function AddSong() {
     setError('');
     setSuccess('');
     setIsVerifying(true);
-    setVerificationStatus({ type: 'info', message: '🔍 Vérification en cours...' });
+    setVerificationStatus({ type: 'info', message: 'Vérification en cours...' });
 
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      setVerificationStatus({ type: 'success', message: '✅ Toutes les vérifications sont passées !' });
+      setVerificationStatus({ type: 'success', message: 'Toutes les vérifications sont passées !' });
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const formDataToSend = new FormData();
@@ -177,7 +177,7 @@ function AddSong() {
         }
       );
 
-      setSuccess('✅ Musique ajoutée avec succès ! En attente de validation.');
+      setSuccess('Musique ajoutée avec succès ! En attente de validation.');
       setLoading(false);
       setIsVerifying(false);
       
@@ -192,9 +192,9 @@ function AddSong() {
       }, 3000);
 
     } catch (error) {
-      console.error('❌ Erreur:', error);
+      console.error('Erreur:', error);
       setError(error.response?.data?.error || error.message || 'Erreur lors de l\'ajout');
-      setVerificationStatus({ type: 'error', message: '❌ Erreur: ' + (error.response?.data?.error || error.message) });
+      setVerificationStatus({ type: 'error', message: 'Erreur: ' + (error.response?.data?.error || error.message) });
       setIsVerifying(false);
       setLoading(false);
     }

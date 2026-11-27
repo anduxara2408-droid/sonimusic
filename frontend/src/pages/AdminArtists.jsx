@@ -36,7 +36,7 @@ function AdminArtists() {
     <div className="min-h-screen bg-soni-black p-8">
       <div className="max-w-4xl mx-auto">
         <div className="bg-gray-900 rounded-xl shadow-2xl p-8">
-          <h1 className="text-3xl font-bold text-soni-gold text-center mb-8">👥 Tous les artistes</h1>
+          <h1 className="text-3xl font-bold text-soni-gold text-center mb-8">Tous les artistes</h1>
 
           {artists.length === 0 ? (
             <div className="text-center text-gray-400 py-12">
@@ -50,7 +50,7 @@ function AdminArtists() {
                     <h3 className="text-white font-semibold">{artist.artistName || artist.name}</h3>
                     <p className="text-gray-400 text-sm">{artist.email}</p>
                     {artist.bio && <p className="text-gray-500 text-sm">{artist.bio}</p>}
-                    {artist.country && <p className="text-gray-500 text-sm">📍 {artist.country}</p>}
+                    {artist.country && <p className="text-gray-500 text-sm">{artist.country}</p>}
                   </div>
                   <div className="text-right">
                     <span className="text-gray-400 text-sm">

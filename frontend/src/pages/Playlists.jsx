@@ -62,7 +62,7 @@ function Playlists() {
   if (!user) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-6">
-        <h1 className="text-3xl font-bold text-white mb-4">📋 Playlists</h1>
+        <h1 className="text-3xl font-bold text-white mb-4">Playlists</h1>
         <p className="text-gray-400 text-center mb-6">
           Connectez-vous pour créer et gérer vos playlists
         </p>
@@ -88,7 +88,7 @@ function Playlists() {
         {/* En-tête */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white">📋 Mes playlists</h1>
+            <h1 className="text-3xl font-bold text-white">Mes playlists</h1>
             <p className="text-gray-400">{playlists.length} playlist(s)</p>
           </div>
           <button
@@ -157,7 +157,7 @@ function Playlists() {
         {/* Liste des playlists */}
         {playlists.length === 0 ? (
           <div className="text-center text-gray-400 py-12">
-            <p className="text-2xl mb-4">🎵</p>
+            <p className="text-2xl mb-4"></p>
             <p>Vous n'avez pas encore de playlists.</p>
             <button
               onClick={() => setShowCreate(true)}
@@ -174,7 +174,7 @@ function Playlists() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-gradient-to-br from-[#d4af37]/30 to-[#d4af37]/10 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">
-                        🎵
+                        {null}
                       </div>
                       <div>
                         <h3 className="text-white font-medium truncate">{playlist.name}</h3>
@@ -192,7 +192,7 @@ function Playlists() {
                     onClick={() => deletePlaylist(playlist.id)}
                     className="text-gray-500 hover:text-red-400 transition-all text-sm opacity-0 group-hover:opacity-100"
                   >
-                    🗑️
+                    Supprimer
                   </button>
                 </div>
                 <Link

@@ -65,12 +65,12 @@ const EditProfile = () => {
       );
 
       if (response.data.success) {
-        setSuccess('✅ Profil mis à jour avec succès !');
+        setSuccess('Profil mis à jour avec succès !');
         setTimeout(() => navigate(`/user/${user.id}`), 1500);
       }
     } catch (error) {
       console.error('Erreur mise à jour:', error);
-      setError('❌ Erreur lors de la mise à jour du profil');
+      setError('Erreur lors de la mise à jour du profil');
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ const EditProfile = () => {
     <div className="min-h-screen bg-[#0a0a0a] py-8">
       <div className="max-w-2xl mx-auto px-4">
         <div className="bg-gray-900/50 rounded-xl border border-gray-800 p-6">
-          <h1 className="text-2xl font-bold text-white mb-6">✏️ Modifier mon profil</h1>
+          <h1 className="text-2xl font-bold text-white mb-6">Modifier mon profil</h1>
 
           {error && <div className="bg-red-500/10 text-red-400 p-3 rounded-lg mb-4">{error}</div>}
           {success && <div className="bg-green-500/10 text-green-400 p-3 rounded-lg mb-4">{success}</div>}

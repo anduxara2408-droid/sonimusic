@@ -1,224 +1,129 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  BarChart3, Clock, Headphones, Heart, MessageCircle, Music2, Plus, RefreshCw, Share2, Users, CheckCircle2, XCircle,
+} from 'lucide-react';
+import api, { formatCount } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import { Link, Navigate } from 'react-router-dom';
+import { Cover } from '../components/SongItems';
+
+const statusLabel = {
+  ACCEPTED: { text: 'En ligne', cls: 'bg-emerald-500/15 text-emerald-400', icon: CheckCircle2 },
+  PENDING: { text: 'En vérification', cls: 'bg-amber-500/15 text-amber-400', icon: Clock },
+  REJECTED: { text: 'Refusé', cls: 'bg-red-500/15 text-red-400', icon: XCircle },
+};
+
+const Kpi = ({ icon: Icon, label, value, hint }) => (
+  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+    <div className="flex items-center gap-2 text-xs font-medium text-gray-400"><Icon className="h-4 w-4 text-amber-400" /> {label}</div>
+    <p className="mt-2 text-2xl font-extrabold text-white">{formatCount(value)}</p>
+    {hint && <p className="mt-0.5 text-[11px] text-gray-500">{hint}</p>}
+  </div>
+);
 
 const ArtistDashboard = () => {
-  const { user, isAuthenticated } = useAuth();
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
-  // Redirection si non connecté ou pas artiste
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: '/artist-dashboard' }} />;
-  }
-
-  if (user?.role !== 'ARTIST' && user?.role !== 'ADMIN') {
-    return <Navigate to="/" />;
-  }
-
-  useEffect(() => {
-    if (user) {
-      fetchStats();
-    }
-  }, [user]);
-
-  const fetchStats = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/stats/artist/${user.id}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Erreur lors du chargement des statistiques');
-      }
-
-      const data = await response.json();
-      setStats(data);
-    } catch (error) {
-      console.error('Erreur:', error);
-      setError('Impossible de charger les statistiques');
-    } finally {
-      setLoading(false);
-    }
+  const load = () => {
+    setError('');
+    api.get('/api/studio/stats')
+      .then(({ data: d }) => setData(d))
+      .catch((e) => setError(e.response?.status === 403
+        ? "L'espace artiste est réservé aux comptes artistes et labels."
+        : 'Impossible de charger les statistiques. Réessaie dans un instant.'));
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#121212] text-white flex items-center justify-center">
-        <div className="text-xl">Chargement des statistiques...</div>
-      </div>
-    );
-  }
+  useEffect(load, []);
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#121212] text-white flex items-center justify-center">
-        <div className="text-xl text-red-400">{error}</div>
+      <div className="mx-auto max-w-xl px-4 py-20 text-center">
+        <p className="text-gray-300">{error}</p>
+        <button onClick={load} className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-white"><RefreshCw className="h-4 w-4" /> Réessayer</button>
       </div>
     );
   }
-
-  if (!stats) {
-    return (
-      <div className="min-h-screen bg-[#121212] text-white flex items-center justify-center">
-        <div className="text-xl">Aucune donnée disponible</div>
-      </div>
-    );
+  if (!data) {
+    return <div className="mx-auto max-w-6xl px-4 py-8"><div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-white/5" />)}</div></div>;
   }
 
-  const maxPlays = stats.songs.length > 0 
-    ? Math.max(...stats.songs.map(s => s.plays))
-    : 1;
+  const { totals, daily, songs } = data;
+  const max = Math.max(1, ...daily.map((d) => d.plays));
 
   return (
-    <div className="min-h-screen bg-[#121212] text-white p-6 md:p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">
-            Dashboard Artiste
-          </h1>
-          <Link
-            to="/add-song"
-            className="bg-gradient-to-r from-orange-500 to-yellow-500 text-black px-6 py-2 rounded-full font-semibold hover:shadow-lg hover:shadow-orange-500/25 transition-all"
-          >
-            + Ajouter une musique
-          </Link>
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-amber-400">Espace artiste</p>
+          <h1 className="mt-1 text-3xl font-black text-white">Bonjour {user?.artistName || user?.name}</h1>
+          <p className="mt-1 text-sm text-gray-400">Tes chiffres en temps réel, calculés sur les vraies écoutes.</p>
         </div>
+        <Link to="/add-song" className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-5 py-3 text-sm font-bold text-black hover:bg-amber-400">
+          <Plus className="h-4 w-4" /> Publier un titre
+        </Link>
+      </div>
 
-        {/* Statistiques globales */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-[#1e1e1e] p-6 rounded-lg">
-            <p className="text-gray-400 text-sm">Total écoutes</p>
-            <p className="text-2xl font-bold text-orange-500">
-              {stats.stats.totalPlays}
-            </p>
-          </div>
-          <div className="bg-[#1e1e1e] p-6 rounded-lg">
-            <p className="text-gray-400 text-sm">Favoris</p>
-            <p className="text-2xl font-bold text-yellow-500">
-              {stats.stats.totalFavorites}
-            </p>
-          </div>
-          <div className="bg-[#1e1e1e] p-6 rounded-lg">
-            <p className="text-gray-400 text-sm">Commentaires</p>
-            <p className="text-2xl font-bold text-blue-500">
-              {stats.stats.totalComments}
-            </p>
-          </div>
-          <div className="bg-[#1e1e1e] p-6 rounded-lg">
-            <p className="text-gray-400 text-sm">Musiques</p>
-            <p className="text-2xl font-bold text-green-500">
-              {stats.stats.totalSongs}
-            </p>
-          </div>
-        </div>
+      <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi icon={Headphones} label="Écoutes totales" value={totals.plays} hint={`${formatCount(totals.plays30)} ces 30 derniers jours`} />
+        <Kpi icon={Users} label="Auditeurs (30 j)" value={totals.listeners30} hint="Personnes différentes" />
+        <Kpi icon={Users} label="Abonnés" value={totals.followers} hint={`+${totals.newFollowers30} ce mois-ci`} />
+        <Kpi icon={Heart} label="J'aime" value={totals.likes} />
+        <Kpi icon={MessageCircle} label="Commentaires" value={totals.comments} />
+        <Kpi icon={Share2} label="Partages" value={totals.shares} />
+        <Kpi icon={Music2} label="Titres en ligne" value={totals.published} hint={`${totals.songs} au total`} />
+        <Kpi icon={Clock} label="En vérification" value={totals.pending} />
+      </div>
 
-        {/* Graphique des écoutes par jour */}
-        {stats.playsByDay && stats.playsByDay.length > 0 && (
-          <div className="bg-[#1e1e1e] rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4">Écoutes par jour (30 derniers jours)</h2>
-            <div className="flex items-end space-x-1 h-48">
-              {stats.playsByDay.slice(-30).map((day, index) => {
-                const height = stats.playsByDay.length > 0
-                  ? (day.count / Math.max(...stats.playsByDay.map(d => d.count))) * 100
-                  : 0;
-                return (
-                  <div key={index} className="flex-1 flex flex-col items-center">
-                    <div
-                      className="w-full bg-gradient-to-t from-orange-500 to-yellow-500 rounded-t"
-                      style={{
-                        height: `${Math.max(height, 2)}%`,
-                        minHeight: '4px',
-                        transition: 'height 0.3s ease'
-                      }}
-                    />
-                    <span className="text-xs text-gray-400 mt-1">
-                      {new Date(day.date).getDate()}
-                    </span>
-                  </div>
-                );
-              })}
+      <section className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+        <div className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-amber-400" /><h2 className="text-lg font-bold text-white">Écoutes des 30 derniers jours</h2></div>
+        <div className="mt-5 flex h-40 items-end gap-[3px]">
+          {daily.map((d) => (
+            <div key={d.day} className="group relative flex-1">
+              <div className="w-full rounded-t bg-amber-500/80 transition-colors group-hover:bg-amber-400" style={{ height: `${Math.max(2, (d.plays / max) * 150)}px` }} />
+              <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-black px-2 py-1 text-[11px] text-white group-hover:block">
+                {new Date(d.day).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} · {d.plays} écoutes
+              </div>
             </div>
+          ))}
+        </div>
+        <div className="mt-2 flex justify-between text-[11px] text-gray-500">
+          <span>{new Date(daily[0].day).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+          <span>Aujourd'hui</span>
+        </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-lg font-bold text-white">Mes titres</h2>
+        {songs.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-white/15 p-8 text-center">
+            <p className="text-gray-300">Tu n'as encore publié aucun titre.</p>
+            <Link to="/add-song" className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-500 px-5 py-2.5 text-sm font-bold text-black"><Plus className="h-4 w-4" /> Publier mon premier titre</Link>
+          </div>
+        ) : (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-white/10">
+            {songs.map((s) => {
+              const st = statusLabel[s.status] || statusLabel.PENDING;
+              return (
+                <div key={s.id} className="flex flex-wrap items-center gap-3 border-b border-white/5 px-4 py-3 last:border-0 sm:flex-nowrap">
+                  <Cover src={s.coverArt} alt={s.title} className="h-12 w-12 flex-shrink-0 rounded-lg" />
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/song/${s.id}`} className="block truncate text-sm font-semibold text-white hover:underline">{s.title}</Link>
+                    <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${st.cls}`}><st.icon className="h-3 w-3" /> {st.text}</span>
+                    {s.status === 'REJECTED' && s.rejectionReason && <p className="mt-1 text-xs text-red-300">Motif : {s.rejectionReason}</p>}
+                  </div>
+                  <div className="grid w-full grid-cols-4 gap-2 text-center text-xs text-gray-400 sm:w-auto sm:gap-6">
+                    <div><p className="font-bold text-white">{formatCount(s.plays)}</p>écoutes</div>
+                    <div><p className="font-bold text-white">{formatCount(s.likes)}</p>j'aime</div>
+                    <div><p className="font-bold text-white">{formatCount(s.comments)}</p>comm.</div>
+                    <div><p className="font-bold text-white">{formatCount(s.shares)}</p>partages</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
-
-        {/* Liste des musiques */}
-        <div className="bg-[#1e1e1e] rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Vos musiques</h2>
-          {stats.songs.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">
-              Vous n'avez pas encore de musiques publiées.
-              <br />
-              <Link to="/add-song" className="text-orange-500 hover:underline">
-                Ajoutez votre première musique !
-              </Link>
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="text-gray-400 border-b border-gray-700">
-                  <tr>
-                    <th className="py-3 px-4">Titre</th>
-                    <th className="py-3 px-4">Écoutes</th>
-                    <th className="py-3 px-4">Favoris</th>
-                    <th className="py-3 px-4">Commentaires</th>
-                    <th className="py-3 px-4">Statut</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.songs.map((song) => (
-                    <tr key={song.id} className="border-b border-gray-800 hover:bg-[#2a2a2a] transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          {song.coverArt && (
-                            <img 
-                              src={song.coverArt} 
-                              alt={song.title}
-                              className="w-10 h-10 rounded object-cover"
-                            />
-                          )}
-                          <span>{song.title}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 h-2 bg-gray-700 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-orange-500 rounded-full"
-                              style={{ width: `${(song.plays / maxPlays) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-sm">{song.plays}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">{song.favorites}</td>
-                      <td className="py-3 px-4">{song.comments}</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          song.status === 'ACCEPTED' ? 'bg-green-500/20 text-green-400' :
-                          song.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-400' :
-                          'bg-red-500/20 text-red-400'
-                        }`}>
-                          {song.status === 'ACCEPTED' ? '✅ Publiée' :
-                           song.status === 'PENDING' ? '⏳ En attente' :
-                           '❌ Refusée'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
+      </section>
     </div>
   );
 };

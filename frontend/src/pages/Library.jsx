@@ -38,7 +38,7 @@ function Library() {
   if (!user) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-6">
-        <h1 className="text-3xl font-bold text-white mb-4">📚 Bibliothèque</h1>
+        <h1 className="text-3xl font-bold text-white mb-4">Bibliothèque</h1>
         <p className="text-gray-400 text-center mb-6">
           Connectez-vous pour accéder à votre bibliothèque
         </p>
@@ -62,7 +62,7 @@ function Library() {
       <div className="max-w-7xl mx-auto">
         
         {/* En-tête */}
-        <h1 className="text-3xl font-bold text-white mb-6">📚 Bibliothèque</h1>
+        <h1 className="text-3xl font-bold text-white mb-6">Bibliothèque</h1>
 
         {/* Onglets */}
         <div className="flex gap-6 border-b border-gray-800 mb-6">
@@ -74,7 +74,7 @@ function Library() {
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            📋 Playlists ({playlists.length})
+            Playlists ({playlists.length})
           </button>
           <button
             onClick={() => setActiveTab('favorites')}
@@ -84,7 +84,7 @@ function Library() {
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            ❤️ Favoris ({favorites.length})
+            Favoris ({favorites.length})
           </button>
           <button
             onClick={() => setActiveTab('albums')}
@@ -94,7 +94,7 @@ function Library() {
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            🏆 Albums
+            Albums
           </button>
         </div>
 
@@ -103,7 +103,7 @@ function Library() {
           <div>
             {playlists.length === 0 ? (
               <div className="text-center text-gray-400 py-12">
-                <p className="text-2xl mb-4">🎵</p>
+                <p className="text-2xl mb-4"></p>
                 <p>Vous n'avez pas encore de playlists.</p>
                 <Link to="/playlists" className="text-[#d4af37] hover:underline mt-2 inline-block">
                   Créer votre première playlist
@@ -116,7 +116,7 @@ function Library() {
                     <div className="bg-gray-900/50 rounded-xl p-4 hover:bg-gray-800 transition-all group">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gradient-to-br from-[#d4af37]/30 to-[#d4af37]/10 rounded-lg flex items-center justify-center text-2xl flex-shrink-0">
-                          🎵
+                          {null}
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="text-white font-medium truncate">{playlist.name}</h3>
@@ -141,7 +141,7 @@ function Library() {
           <div>
             {favorites.length === 0 ? (
               <div className="text-center text-gray-400 py-12">
-                <p className="text-2xl mb-4">❤️</p>
+                <p className="text-2xl mb-4"></p>
                 <p>Vous n'avez pas encore de titres likés.</p>
                 <Link to="/discover" className="text-[#d4af37] hover:underline mt-2 inline-block">
                   Découvrir des musiques
@@ -178,7 +178,7 @@ function Library() {
 
         {activeTab === 'albums' && (
           <div className="text-center text-gray-400 py-12">
-            <p className="text-2xl mb-4">🏆</p>
+            <p className="text-2xl mb-4"></p>
             <p>Fonctionnalité à venir : Albums enregistrés</p>
             <p className="text-sm mt-2">Bientôt disponible !</p>
           </div>
