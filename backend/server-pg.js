@@ -9,6 +9,7 @@ import { ensureSchema } from './db-init.js';
 import { registerFeatureRoutes, FEATURES_SCHEMA_SQL } from './features.js';
 import { registerStudioRoutes } from './studio.js';
 import { registerSupportRoutes, SUPPORT_SCHEMA_SQL } from './support.js';
+import { registerReleaseRoutes, RELEASES_SCHEMA_SQL } from './releases.js';
 const { Pool } = pkg;
 
 const app = express();
@@ -1076,6 +1077,12 @@ registerSupportRoutes(app, {
   pool, optionalAuth, authenticateToken, rateLimit, sendEmail, escapeHtml, normalizeEmail, isValidEmail,
   supportEmail: process.env.SUPPORT_EMAIL || 'contact@sonimusic.online'
 });
+registerReleaseRoutes(app, {
+  pool, authenticateToken, rateLimit, sendEmail, escapeHtml,
+  supportEmail: process.env.SUPPORT_EMAIL || 'contact@sonimusic.online',
+  frontendUrl: FRONTEND_URL,
+  publicApiUrl: (process.env.PUBLIC_API_URL || 'https://sonimusic-1.onrender.com').replace(/\/+$/, '')
+});
 
 // ============================================================
 // GESTIONNAIRE D'ERREURS FINAL (JSON)
@@ -1119,7 +1126,7 @@ app.listen(PORT, () => {
       .then(() => {
         console.log('🗄️ Base de données : ✅ connectée');
         return ensureSchema(pool)
-          .then(() => pool.query(FEATURES_SCHEMA_SQL + SUPPORT_SCHEMA_SQL))
+          .then(() => pool.query(FEATURES_SCHEMA_SQL + SUPPORT_SCHEMA_SQL + RELEASES_SCHEMA_SQL))
           .then(() => console.log('🗄️ Schéma : ✅ tables vérifiées'))
           .catch((err) => console.error('🗄️ Schéma : ❌ échec de l\'initialisation -', err.code || err.message));
       })

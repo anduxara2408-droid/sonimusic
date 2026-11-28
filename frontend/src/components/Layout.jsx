@@ -55,7 +55,7 @@ const Layout = ({ children }) => {
   ];
   const artist = [
     { to: '/artist-dashboard', icon: LayoutDashboard, label: 'Espace artiste' },
-    { to: '/add-song', icon: Upload, label: 'Publier un titre' },
+    { to: '/studio/publish', icon: Upload, label: 'Publier un titre' },
   ];
   const label = [{ to: '/label-dashboard', icon: Building2, label: 'Espace label' }];
   const admin = [{ to: '/admin', icon: Shield, label: 'Administration' }];

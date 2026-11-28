@@ -11,7 +11,8 @@ import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import VerifyEmail from './pages/VerifyEmail';
 import ConfirmEmailChange from './pages/ConfirmEmailChange';
-import AddSong from './pages/AddSong';
+import Publish from './pages/studio/Publish';
+import { AdminReleases, AdminReleaseDetail } from './pages/admin/AdminReleases';
 import MySongs from './pages/MySongs';
 import ArtistDashboard from './pages/ArtistDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -117,7 +118,8 @@ function App() {
             
             <Route path="/dashboard" element={<PrivateRoute><Layout><Dashboard /></Layout></PrivateRoute>} />
             <Route path="/edit-profile" element={<PrivateRoute><Layout><EditProfile /></Layout></PrivateRoute>} />
-            <Route path="/add-song" element={<PrivateRoute><Layout><AddSong /></Layout></PrivateRoute>} />
+            <Route path="/studio/publish" element={<PrivateRoute><Layout><Publish /></Layout></PrivateRoute>} />
+            <Route path="/add-song" element={<Navigate to="/studio/publish" replace />} />
             <Route path="/my-songs" element={<PrivateRoute><Layout><MySongs /></Layout></PrivateRoute>} />
             <Route path="/favorites" element={<PrivateRoute><Layout><LikedSongs /></Layout></PrivateRoute>} />
             <Route path="/playlists" element={<PrivateRoute><Layout><Playlists /></Layout></PrivateRoute>} />
@@ -125,6 +127,8 @@ function App() {
             <Route path="/artist-dashboard" element={<PrivateRoute><Layout><ArtistDashboard /></Layout></PrivateRoute>} />
             
             <Route path="/admin" element={<AdminRoute><AdminLayout><AdminDashboard /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/releases" element={<AdminRoute><AdminLayout><AdminReleases /></AdminLayout></AdminRoute>} />
+            <Route path="/admin/releases/:id" element={<AdminRoute><AdminLayout><AdminReleaseDetail /></AdminLayout></AdminRoute>} />
             <Route path="/admin/upload" element={<AdminRoute><AdminLayout><AdminUpload /></AdminLayout></AdminRoute>} />
             <Route path="/admin/songs" element={<AdminRoute><AdminLayout><AdminSongs /></AdminLayout></AdminRoute>} />
             <Route path="/admin/artists" element={<AdminRoute><AdminLayout><AdminArtists /></AdminLayout></AdminRoute>} />

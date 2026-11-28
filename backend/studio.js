@@ -34,7 +34,7 @@ export function registerStudioRoutes(app, deps) {
   const radioSongs = async () => {
     if (Date.now() - radioCache.at < 60 * 1000) return radioCache.songs;
     const r = await pool.query(
-      `${SONG_SELECT} WHERE s.status = 'ACCEPTED' AND s.duration > 0 AND s."audioFile" IS NOT NULL ORDER BY s.id`
+      `${SONG_SELECT} WHERE s.status = 'ACCEPTED' AND s.duration > 0 AND NOT COALESCE(s."isForSale", false) AND s."audioFile" IS NOT NULL ORDER BY s.id`
     );
     radioCache = { at: Date.now(), songs: r.rows.map(withArtist) };
     return radioCache.songs;
