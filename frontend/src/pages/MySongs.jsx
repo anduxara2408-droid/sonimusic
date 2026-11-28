@@ -78,7 +78,7 @@ function MySongs() {
           {songs.length === 0 ? (
             <div className="text-center text-gray-400 py-8">
               <p>Aucune musique ajoutée pour le moment.</p>
-              <Link to="/add-song" className="text-[#d4af37] hover:underline">
+              <Link to="/studio/publish" className="text-[#d4af37] hover:underline">
                 Ajouter votre première musique
               </Link>
             </div>

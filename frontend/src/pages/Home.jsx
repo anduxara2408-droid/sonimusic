@@ -162,7 +162,7 @@ const Home = () => {
           <RadioIcon className="h-10 w-10 flex-shrink-0 text-amber-400" />
           <div><p className="font-bold text-white">Radio SONIMUSIC 24h/24</p><p className="text-sm text-gray-400">Gratuite, en continu, sans inscription.</p></div>
         </Link>
-        <Link to={isAuthenticated ? (user?.role === 'ARTIST' ? '/add-song' : '/artistes-labels') : '/register'} className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 hover:border-amber-500/50">
+        <Link to={isAuthenticated ? (user?.role === 'ARTIST' ? '/studio/publish' : '/artistes-labels') : '/register'} className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 hover:border-amber-500/50">
           <Upload className="h-10 w-10 flex-shrink-0 text-amber-400" />
           <div><p className="font-bold text-white">Tu es artiste ou label ?</p><p className="text-sm text-gray-400">Publie ta musique et vends tes projets sur SONIMUSIC.</p></div>
         </Link>

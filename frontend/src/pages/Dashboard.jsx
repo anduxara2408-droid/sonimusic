@@ -170,7 +170,7 @@ function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           {(user?.role === 'ARTIST' || user?.role === 'ADMIN') && (
             <button
-              onClick={() => navigate('/add-song')}
+              onClick={() => navigate('/studio/publish')}
               className="bg-[#c9a25c]/10 hover:bg-[#c9a25c]/20 border border-[#c9a25c]/30 rounded-xl p-4 text-center transition-all"
             >
               <Plus className="w-8 h-8 text-[#c9a25c] mx-auto mb-2" />

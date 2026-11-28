@@ -13,6 +13,53 @@ const statusLabel = {
   REJECTED: { text: 'Refusé', cls: 'bg-red-500/15 text-red-400', icon: XCircle },
 };
 
+const releaseStatus = {
+  PUBLISHED: ['En ligne', 'bg-emerald-500/15 text-emerald-400'],
+  PENDING_REVIEW: ['En vérification', 'bg-amber-500/15 text-amber-400'],
+  REJECTED: ['Refusée', 'bg-red-500/15 text-red-400'],
+  TAKEN_DOWN: ['Retirée', 'bg-red-500/15 text-red-400'],
+};
+
+const MyReleases = () => {
+  const [d, setD] = useState(null);
+  useEffect(() => { api.get('/api/releases/mine').then(({ data }) => setD(data)).catch(() => setD({ releases: [], strikes: [] })); }, []);
+  if (!d) return null;
+  return (
+    <>
+      {d.strikes.length > 0 && (
+        <section className="mt-8 rounded-2xl border border-red-500/30 bg-red-500/10 p-5">
+          <h2 className="font-bold text-red-200">Avertissements : {d.strikes.length}/{d.maxStrikes}</h2>
+          <p className="mt-1 text-sm text-red-100/80">Chaque avertissement expire après 90 jours. À {d.maxStrikes}, la publication est suspendue.</p>
+          <ul className="mt-3 space-y-1 text-sm text-red-100">
+            {d.strikes.map((s) => <li key={s.createdAt}>{new Date(s.createdAt).toLocaleDateString('fr-FR')} : {s.reason} (expire le {new Date(s.expiresAt).toLocaleDateString('fr-FR')})</li>)}
+          </ul>
+        </section>
+      )}
+      {d.releases.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-lg font-bold text-white">Mes sorties</h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {d.releases.map((r) => {
+              const [text, cls] = releaseStatus[r.status] || releaseStatus.PENDING_REVIEW;
+              return (
+                <div key={r.id} className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                  <Cover src={r.coverUrl} alt={r.title} className="h-16 w-16 flex-shrink-0 rounded-xl" />
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-white">{r.title}</p>
+                    <p className="text-xs text-gray-400">{r.kind === 'SINGLE' ? 'Single' : r.kind === 'EP' ? 'EP' : 'Album'} · {r.tracks} titre{r.tracks > 1 ? 's' : ''} · {r.mode === 'SALE' ? `${Number(r.price).toLocaleString('fr-FR')} FCFA` : 'Gratuit'} · {r.ref}</p>
+                    <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${cls}`}>{text}</span>
+                    {r.rejectionReason && <p className="mt-1 text-xs text-red-300">Motif : {r.rejectionReason}</p>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+    </>
+  );
+};
+
 const Kpi = ({ icon: Icon, label, value, hint }) => (
   <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
     <div className="flex items-center gap-2 text-xs font-medium text-gray-400"><Icon className="h-4 w-4 text-amber-400" /> {label}</div>
@@ -59,7 +106,7 @@ const ArtistDashboard = () => {
           <h1 className="mt-1 text-3xl font-black text-white">Bonjour {user?.artistName || user?.name}</h1>
           <p className="mt-1 text-sm text-gray-400">Tes chiffres en temps réel, calculés sur les vraies écoutes.</p>
         </div>
-        <Link to="/add-song" className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-5 py-3 text-sm font-bold text-black hover:bg-amber-400">
+        <Link to="/studio/publish" className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-5 py-3 text-sm font-bold text-black hover:bg-amber-400">
           <Plus className="h-4 w-4" /> Publier un titre
         </Link>
       </div>
@@ -93,12 +140,14 @@ const ArtistDashboard = () => {
         </div>
       </section>
 
+      <MyReleases />
+
       <section className="mt-8">
         <h2 className="text-lg font-bold text-white">Mes titres</h2>
         {songs.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-dashed border-white/15 p-8 text-center">
             <p className="text-gray-300">Tu n'as encore publié aucun titre.</p>
-            <Link to="/add-song" className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-500 px-5 py-2.5 text-sm font-bold text-black"><Plus className="h-4 w-4" /> Publier mon premier titre</Link>
+            <Link to="/studio/publish" className="mt-4 inline-flex items-center gap-2 rounded-full bg-amber-500 px-5 py-2.5 text-sm font-bold text-black"><Plus className="h-4 w-4" /> Publier mon premier titre</Link>
           </div>
         ) : (
           <div className="mt-4 overflow-hidden rounded-2xl border border-white/10">

@@ -8,7 +8,8 @@ import {
   AlbumIcon,
   UserIcon,
   LogOutIcon,
-  PlusCircleIcon
+  PlusCircleIcon,
+  ShieldCheck
 } from 'lucide-react';
 
 const AdminLayout = ({ children }) => {
@@ -22,6 +23,7 @@ const AdminLayout = ({ children }) => {
 
   const navItems = [
     { to: '/admin', icon: LayoutDashboardIcon, label: 'Tableau de bord' },
+    { to: '/admin/releases', icon: ShieldCheck, label: 'Sorties à vérifier' },
     { to: '/admin/add-song', icon: PlusCircleIcon, label: 'Ajouter une musique' },
     { to: '/admin/songs', icon: MusicIcon, label: 'Musiques' },
     { to: '/admin/artists', icon: UsersIcon, label: 'Artistes' },
